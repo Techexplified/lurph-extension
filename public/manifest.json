@@ -1,10 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "My React Extension",
+  "name": "Lurph AI",
   "version": "1.0.0",
-  "description": "My first Chrome extension built with React.",
+  "description": "Your AI assistant for the web.",
+  "permissions": ["identity"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
-    "default_title": "My React Extension",
-    "default_popup": "index.html"
+    "default_title": "Open Lurph AI"
   }
 }
