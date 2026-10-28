@@ -4,6 +4,10 @@
   "version": "1.0.0",
   "description": "Your AI assistant for the web.",
   "permissions": ["identity"],
+  "host_permissions": [
+    "http://localhost:4000/*",
+    "https://lurph-extension-backend.vercel.app/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
