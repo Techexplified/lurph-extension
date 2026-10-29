@@ -1,11 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Lurph AI",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Your AI assistant for the web.",
   "permissions": [
     "identity",
-    "storage"
+    "storage",
+    "sidePanel",
+    "scripting",
+    "activeTab"
   ],
   "host_permissions": [
     "http://localhost:4000/*",
@@ -16,6 +19,9 @@
   },
   "action": {
     "default_title": "Open Lurph AI"
+  },
+  "side_panel": {
+    "default_path": "index.html"
   },
   "optional_host_permissions": [
     "<all_urls>"
