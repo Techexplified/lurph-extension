@@ -77,3 +77,61 @@ a {
 ::-webkit-scrollbar-thumb:hover {
   background: #696969;
 }
+
+/* Onboarding screens are designed to fit one normal browser viewport. */
+.ob-screen { isolation: isolate; }
+.ob-panel { position: relative; }
+.ob-step-panel { box-shadow: 0 18px 60px rgba(0,0,0,.28); }
+.ob-final-panel { box-shadow: 0 18px 60px rgba(0,0,0,.28); }
+.ob-feature-list { grid-template-rows: repeat(4, minmax(0, auto)); }
+.ob-feature-card { min-height: 0; }
+.ob-instruction-grid { grid-template-rows: minmax(0, 1fr); }
+.ob-instruction-card { min-height: 0; }
+.ob-mock-window { min-width: 0; }
+
+@media (max-height: 760px) {
+  .ob-screen { padding: 8px !important; }
+  .ob-panel { padding: 12px !important; }
+  .ob-header > span:first-child { width: 32px; height: 32px; font-size: 22px; }
+  .ob-header > span:nth-child(2) { font-size: 16px; }
+  .ob-progress { margin-top: 7px !important; }
+  .ob-intro { margin-top: 8px !important; }
+  .ob-feature-list { margin-top: 9px !important; gap: 6px !important; }
+  .ob-feature-card { padding: 7px 9px !important; gap: 9px !important; }
+  .ob-feature-card > div:first-child { width: 36px; height: 36px; }
+  .ob-feature-card svg { width: 20px; height: 20px; }
+  .ob-permission-list { margin-top: 8px !important; gap: 5px !important; }
+  .ob-permission-card { padding: 7px 9px !important; gap: 9px !important; }
+  .ob-permission-card > span { width: 28px; height: 28px; }
+  .ob-warning { padding: 7px 9px !important; margin-top: 6px !important; }
+  .ob-warning ul { margin-top: 3px !important; gap: 2px !important; }
+  .ob-footer { padding-top: 7px !important; }
+  .ob-final-hero { margin-top: 5px !important; }
+  .ob-final-hero > div:first-child { width: 36px; height: 36px; font-size: 26px; }
+  .ob-instruction-grid { margin-top: 8px !important; gap: 8px !important; }
+  .ob-instruction-card { padding: 9px !important; }
+  .ob-mock-window { margin-top: 8px !important; }
+  .ob-primary-button { min-height: 38px !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+}
+
+@media (max-height: 650px) {
+  .ob-screen { padding: 5px !important; }
+  .ob-panel { padding: 8px !important; }
+  .ob-intro p { line-height: 1.25 !important; }
+  .ob-feature-card p, .ob-permission-card p { line-height: 1.25 !important; }
+  .ob-feature-card { padding: 5px 7px !important; }
+  .ob-permission-card { padding: 5px 7px !important; }
+  .ob-warning { padding: 5px 7px !important; }
+  .ob-final-hero > p:last-child { margin-top: 4px !important; }
+  .ob-instruction-grid { gap: 6px !important; }
+  .ob-instruction-card { padding: 7px !important; }
+  .ob-instruction-card p { font-size: 11px !important; }
+  .ob-mock-window { margin-top: 5px !important; }
+}
+
+@media (max-width: 900px) {
+  .ob-final-panel { overflow-y: auto; }
+  .ob-instruction-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ob-instruction-card h2 { font-size: 12px; }
+  .ob-instruction-card p { font-size: 10px; }
+}

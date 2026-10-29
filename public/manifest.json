@@ -3,7 +3,10 @@
   "name": "Lurph AI",
   "version": "1.0.0",
   "description": "Your AI assistant for the web.",
-  "permissions": ["identity"],
+  "permissions": [
+    "identity",
+    "storage"
+  ],
   "host_permissions": [
     "http://localhost:4000/*",
     "https://lurph-extension-backend.vercel.app/*"
@@ -13,5 +16,8 @@
   },
   "action": {
     "default_title": "Open Lurph AI"
-  }
+  },
+  "optional_host_permissions": [
+    "<all_urls>"
+  ]
 }

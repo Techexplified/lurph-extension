@@ -62,3 +62,16 @@ If you change the extension ID, update `GOOGLE_EXTENSION_REDIRECT_URL` on the ba
 - `POST /api/auth/logout`
 
 Access and refresh tokens use the existing `chrome.storage.local` implementation in the extension, with a `localStorage` fallback for regular Vite development. The frontend never receives Lurph tokens in the OAuth URL; it exchanges a short-lived, single-use code with the backend.
+
+
+## First-install and onboarding flow
+
+- On first installation, the extension opens `index.html` in a tab. Unauthenticated users see the sign-in/create-account screen.
+- After successful email/password or Google sign-in, first-time users see the three onboarding steps in order: Welcome, Permissions & Privacy, and You're all set.
+- The Continue button on the permissions step requests optional access to websites through Chrome's native permission prompt. If permission is denied, onboarding can still finish and the screen explains where to enable access later.
+- The final Start using Lurph button saves `lurph_onboarding_completed` in extension storage and closes the setup tab. The welcome flow is not shown again after completion.
+- The toolbar icon can be clicked any time to reopen the extension page. Chrome requires users to pin the icon manually from the Extensions menu.
+
+### Before production build
+
+Set `VITE_API_BASE_URL=https://lurph-extension-backend.vercel.app` in the frontend environment before running `npm run build`. The manifest includes that backend host and localhost for development, plus optional `<all_urls>` website access requested only after the user clicks Continue.

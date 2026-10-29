@@ -9,6 +9,13 @@ import {
   KeyRound,
   MessageSquareText,
   Zap,
+  CircleMinus,
+  ShieldCheck,
+  Sparkles,
+  Puzzle,
+  Pin,
+  ArrowRight,
+  X,
 } from 'lucide-react'
 
 const features = [
@@ -43,6 +50,189 @@ function GoogleMark() {
 const inputClasses = 'h-11 w-full rounded-[7px] border border-[#2c2c2c] bg-[#0d0d0d] px-[13px] text-[clamp(13px,1.05vw,15px)] font-normal text-[#f4f4f4] outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-[#a0a0a0] focus:border-[#8f7c00] focus:ring-2 focus:ring-[#ffdc00]/10'
 const labelClasses = 'flex flex-col gap-2 text-[13px] font-medium text-[#bcbcbc]'
 
+const ONBOARDING_STORAGE_KEY = 'lurph_onboarding_completed'
+
+async function readOnboardingCompleted() {
+  if (globalThis.chrome?.storage?.local) {
+    const stored = await chrome.storage.local.get(ONBOARDING_STORAGE_KEY)
+    return stored[ONBOARDING_STORAGE_KEY] === true
+  }
+  try {
+    return localStorage.getItem(ONBOARDING_STORAGE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+async function writeOnboardingCompleted() {
+  if (globalThis.chrome?.storage?.local) {
+    await chrome.storage.local.set({ [ONBOARDING_STORAGE_KEY]: true })
+    return
+  }
+  localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true')
+}
+
+function BrandHeader({ onClose }) {
+  return (
+    <header className="ob-header flex shrink-0 items-center gap-2.5">
+      <span className="grid size-9 place-items-center rounded-lg bg-[#ffdc00] pb-1 pr-1 text-[25px] font-black leading-none tracking-[-3px] text-[#171600]">L</span>
+      <span className="text-lg font-bold tracking-tight">Lurph</span>
+      <button type="button" onClick={onClose} className="ml-auto grid size-8 place-items-center rounded-lg text-xl text-[#a0a0a0] transition hover:bg-white/[0.06] hover:text-white" aria-label="Close onboarding"><X size={19} /></button>
+    </header>
+  )
+}
+
+function OnboardingProgress({ step }) {
+  return (
+    <div className="ob-progress mx-auto mt-3 flex shrink-0 items-center gap-2" aria-label={`Onboarding step ${step} of 3`}>
+      {[1, 2, 3].map((item) => <span key={item} className={`h-1.5 w-11 rounded-full ${item <= step ? 'bg-[#ffdc00]' : 'bg-white/[0.13]'}`} />)}
+    </div>
+  )
+}
+
+function ToolbarMock() {
+  return (
+    <div className="ob-mock-window mt-auto overflow-hidden rounded-xl border border-white/[0.12] bg-[#09090a]">
+      <div className="flex h-7 items-center gap-1.5 border-b border-white/[0.08] bg-[#1b1b1e] px-2.5">
+        <span className="size-2 rounded-full bg-[#ef6666]" /><span className="size-2 rounded-full bg-[#e8bd45]" /><span className="size-2 rounded-full bg-[#39b86a]" />
+        <div className="ml-auto flex items-center gap-2 text-[#b4b4b8]"><span>☆</span><Puzzle size={14} /></div>
+      </div>
+      <div className="p-2.5">
+        <div className="flex items-center gap-2 rounded-lg border border-white/[0.08] bg-[#151517] px-2 py-2 text-xs">
+          <span className="grid size-6 place-items-center rounded-md bg-[#ffdc00] text-base font-black text-black">L</span><span className="flex-1">Lurph</span><Pin size={14} className="text-[#ffdc00]" />
+        </div>
+        <div className="mt-2 flex items-center gap-2 text-[10px] text-[#8f8f95]"><Puzzle size={12} /> Extensions menu <span className="ml-auto">⋮</span></div>
+      </div>
+    </div>
+  )
+}
+
+function ContextMenuMock() {
+  return (
+    <div className="ob-mock-window mt-auto rounded-xl border border-white/[0.12] bg-[#111113] p-2.5 text-[11px] text-[#c5c5c8] shadow-lg">
+      {['Copy', 'Search Google for “AI”', 'Print…'].map((item) => <div key={item} className="rounded-md px-2 py-1.5">{item}</div>)}
+      <div className="flex items-center gap-2 rounded-md bg-[#ffdc00]/[0.17] px-2 py-2 font-semibold text-[#ffdf00]"><span className="grid size-5 place-items-center rounded bg-[#ffdc00] text-[11px] font-black text-black">L</span> Ask Lurph about this</div>
+      <div className="rounded-md px-2 py-1.5">Inspect</div>
+    </div>
+  )
+}
+
+function SidebarMock() {
+  return (
+    <div className="ob-mock-window mt-auto overflow-hidden rounded-xl border border-white/[0.12] bg-[#09090a]">
+      <div className="flex items-center gap-2 border-b border-white/[0.08] px-2.5 py-2 text-xs font-semibold"><span className="grid size-5 place-items-center rounded bg-[#ffdc00] text-[11px] font-black text-black">L</span>Lurph<span className="ml-auto text-[#aaa]">×</span></div>
+      <div className="space-y-2 p-2.5">
+        <div className="h-2 w-3/4 rounded-full bg-white/[0.08]" /><div className="h-2 w-full rounded-full bg-white/[0.08]" /><div className="h-2 w-5/6 rounded-full bg-white/[0.08]" />
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-white/[0.12] bg-[#1c1c20] px-2 py-2 text-[10px] text-[#bcbcc2]"><span className="flex-1">Ask anything…</span><ArrowRight size={13} /></div>
+      </div>
+    </div>
+  )
+}
+
+function OnboardingScreen({ step, onNext, onContinue, onFinish, onClose, websiteAccessGranted }) {
+  const features = [
+    { icon: MessageSquareText, title: 'Use AI on any website', description: 'Get answers, summarize, translate, rewrite and more, right where you work.' },
+    { icon: Zap, title: 'Multiple leading AI models', description: 'GPT-4o, Claude, Gemini, Llama, DeepSeek and more in one place.' },
+    { icon: Sparkles, title: 'Save time with better workflows', description: 'Turn your prompts into reusable workflows.' },
+    { icon: ShieldCheck, title: 'Private, secure, and in your control', description: 'Your data stays yours.' },
+  ]
+  const permissions = [
+    { title: 'Read and modify the content you see on websites', description: 'So you can translate, rewrite, summarize, and ask Lurph about text, images, and links.' },
+    { title: 'Access your clipboard (optional)', description: 'To quickly analyze copied text.' },
+    { title: 'Work on supported websites', description: 'To provide assistance while you browse, search, read, write, shop, or create.' },
+  ]
+
+  if (step === 1) {
+    return (
+      <main className="ob-screen h-svh w-full overflow-hidden bg-[#080808] p-3 text-[#f7f7f7] sm:p-4">
+        <section className="ob-panel ob-step-panel mx-auto flex h-full min-h-0 w-full max-w-[650px] flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-gradient-to-br from-[#171717] via-[#111114] to-[#09090b] p-4 sm:p-5">
+          <div className="pointer-events-none absolute" />
+          <BrandHeader onClose={onClose} />
+          <OnboardingProgress step={1} />
+          <div className="ob-intro mt-4 shrink-0 text-center">
+            <h1 className="text-[clamp(25px,3.3vh,34px)] font-bold tracking-tight">Welcome to Lurph!</h1>
+            <p className="mx-auto mt-2 max-w-[490px] text-[clamp(13px,1.9vh,16px)] leading-[1.45] text-[#aaa9ad]">Your AI assistant for the web.<br />Get answers, summarize, translate, rewrite and more, wherever you browse.</p>
+          </div>
+          <div className="ob-feature-list mt-4 grid min-h-0 gap-2">
+            {features.map(({ icon: Icon, title, description }) => (
+              <div key={title} className="ob-feature-card flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.035] p-3">
+                <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#ffdc00]/[0.10] text-[#ffdc00]"><Icon size={23} /></div>
+                <div className="min-w-0"><h2 className="text-[clamp(12px,1.8vh,14px)] font-semibold">{title}</h2><p className="mt-1 text-[clamp(11px,1.55vh,13px)] leading-[1.4] text-[#aaa9ad]">{description}</p></div>
+              </div>
+            ))}
+          </div>
+          <button type="button" onClick={onNext} className="ob-primary-button mt-auto inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ffdc00] to-[#ffc928] px-5 py-2.5 text-sm font-bold text-[#171500] transition hover:brightness-105">Next <ArrowRight size={18} /></button>
+        </section>
+      </main>
+    )
+  }
+
+  if (step === 2) {
+    return (
+      <main className="ob-screen h-svh w-full overflow-hidden bg-[#080808] p-3 text-[#f7f7f7] sm:p-4">
+        <section className="ob-panel ob-step-panel mx-auto flex h-full min-h-0 w-full max-w-[650px] flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-gradient-to-br from-[#111] to-[#080808] p-4 sm:p-5">
+          <BrandHeader onClose={onClose} />
+          <OnboardingProgress step={2} />
+          <div className="ob-intro mt-4 shrink-0 text-center">
+            <h1 className="text-[clamp(22px,3vh,30px)] font-bold tracking-tight">Let Lurph see what you work with</h1>
+            <p className="mx-auto mt-2 max-w-[480px] text-[clamp(12px,1.8vh,15px)] leading-[1.45] text-[#aaa9ad]">Lurph needs a few permissions to work across the web.<br className="hidden sm:block" /> Here’s what we can and cannot see.</p>
+          </div>
+          <div className="ob-permission-list mt-3 grid shrink-0 gap-2">
+            {permissions.map(({ title, description }) => (
+              <div key={title} className="ob-permission-card flex items-start gap-3 rounded-xl border border-white/[0.05] bg-white/[0.035] p-3">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#16a34a] text-white"><Check size={19} strokeWidth={3} /></span>
+                <div className="min-w-0"><h2 className="text-[clamp(12px,1.7vh,14px)] font-semibold leading-5">{title}</h2><p className="mt-1 text-[clamp(11px,1.5vh,13px)] leading-[1.35] text-[#aaa9ad]">{description}</p></div>
+              </div>
+            ))}
+          </div>
+          <div className="ob-warning mt-2 rounded-xl border border-[#ef4444]/10 bg-[#ef4444]/[0.08] p-3">
+            <h2 className="text-sm font-semibold text-[#ff7777]">We do NOT:</h2>
+            <ul className="mt-1.5 grid gap-1 text-[clamp(11px,1.5vh,13px)] leading-[1.35] text-[#aaa9ad]">
+              {['Read your browsing history', 'Access your passwords', 'Access your personal files', 'Collect data without your consent', 'Use your data to train models'].map((item) => <li key={item} className="flex items-center gap-2"><CircleMinus size={15} className="shrink-0 text-[#ef6464]" />{item}</li>)}
+            </ul>
+          </div>
+          <div className="ob-footer mt-auto flex shrink-0 items-center justify-between gap-3 pt-3">
+            <p className="text-xs text-[#aaa9ad]">Your privacy matters. <span className="text-[#ffdc00] underline underline-offset-4">Learn more →</span></p>
+            <button type="button" onClick={onContinue} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ffdc00] to-[#ffc928] px-5 py-2 text-sm font-bold text-[#171500] transition hover:brightness-105">Continue <ArrowRight size={17} /></button>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
+  return (
+    <main className="ob-screen h-svh w-full overflow-hidden bg-[#080808] p-3 text-[#f7f7f7] sm:p-4">
+      <section className="ob-panel ob-final-panel mx-auto flex h-full min-h-0 w-full max-w-[1370px] flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-gradient-to-br from-[#111] to-[#080808] p-4 sm:p-5 lg:p-6">
+        <BrandHeader onClose={onClose} />
+        <OnboardingProgress step={3} />
+        <div className="ob-final-hero mt-2 shrink-0 text-center">
+          <div className="relative mx-auto grid size-11 place-items-center rounded-xl bg-[#ffdc00] text-3xl font-black leading-none tracking-[-3px] text-[#171600] shadow-[0_0_30px_rgba(255,220,0,0.18)]"><span>L</span><Sparkles size={16} className="absolute -left-4 -top-2 text-[#ffdc00]" /><Sparkles size={16} className="absolute -right-4 -top-1 text-[#ffdc00]" /></div>
+          <h1 className="mt-2 text-[clamp(27px,4vh,42px)] font-bold tracking-tight">You’re all set!</h1>
+          <p className="mt-1 text-[clamp(13px,1.9vh,17px)] text-[#aaa9ad]">Lurph is now ready to use on any website.</p>
+          <p className="mt-2 text-[clamp(12px,1.7vh,15px)] text-[#c5c5c8]">Here’s how to access it:</p>
+        </div>
+        <div className="ob-instruction-grid mt-3 grid min-h-0 flex-1 grid-cols-1 gap-2.5 lg:grid-cols-3">
+          <article className="ob-instruction-card flex min-h-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 sm:p-3.5">
+            <div className="flex items-start gap-2.5"><span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#ffdc00]/[0.15] text-base font-bold text-[#ffdc00]">1</span><div><h2 className="text-sm font-semibold">Find Lurph in your Chrome toolbar</h2><p className="mt-1 text-xs leading-[1.4] text-[#aaa9ad]">Click the puzzle icon in Chrome’s toolbar, then find Lurph in the list.</p></div></div>
+            <ToolbarMock />
+          </article>
+          <article className="ob-instruction-card flex min-h-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 sm:p-3.5">
+            <div className="flex items-start gap-2.5"><span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#ffdc00]/[0.15] text-base font-bold text-[#ffdc00]">2</span><div><h2 className="text-sm font-semibold">Start using Lurph anywhere on the web</h2><p className="mt-1 text-xs leading-[1.4] text-[#aaa9ad]">Right-click text or a page and choose “Ask Lurph”, or click the toolbar icon.</p></div></div>
+            <ContextMenuMock />
+          </article>
+          <article className="ob-instruction-card flex min-h-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 sm:p-3.5">
+            <div className="flex items-start gap-2.5"><span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#ffdc00]/[0.15] text-base font-bold text-[#ffdc00]">3</span><div><h2 className="text-sm font-semibold">Get answers, insights and more</h2><p className="mt-1 text-xs leading-[1.4] text-[#aaa9ad]">Open Lurph to chat, summarize, translate, rewrite, and more.</p></div></div>
+            <SidebarMock />
+          </article>
+        </div>
+        {websiteAccessGranted === false && <p className="mt-2 text-center text-xs text-[#f3d66b]">Website access wasn’t granted. You can enable it later in Chrome’s extension settings.</p>}
+        <button type="button" onClick={onFinish} className="ob-primary-button mx-auto mt-3 inline-flex min-h-11 w-full max-w-[360px] shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ffdc00] to-[#ffc928] px-5 py-2.5 text-sm font-bold text-[#171500] transition hover:brightness-105">Start using Lurph <ArrowRight size={18} /></button>
+      </section>
+    </main>
+  )
+}
+
+
 function App() {
   const [mode, setMode] = useState('signin')
   const [showPassword, setShowPassword] = useState(false)
@@ -53,6 +243,10 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingStep, setOnboardingStep] = useState(1)
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false)
+  const [websiteAccessGranted, setWebsiteAccessGranted] = useState(null)
   const [isCheckingSession, setIsCheckingSession] = useState(true)
 
   const isSignup = mode === 'signup'
@@ -66,10 +260,18 @@ function App() {
     let active = true
     async function restoreSession() {
       try {
+        const completed = await readOnboardingCompleted()
+        if (active) setHasCompletedOnboarding(completed)
         const tokens = await getTokens()
         if (!tokens?.refreshToken) return
         const user = await getCurrentUser()
-        if (active) setCurrentUser(user)
+        if (active) {
+          setCurrentUser(user)
+          if (!completed) {
+            setOnboardingStep(1)
+            setShowOnboarding(true)
+          }
+        }
       } catch {
         // An expired/revoked session is handled by the API client; show sign-in.
         if (active) setCurrentUser(null)
@@ -91,6 +293,13 @@ function App() {
         : { email: email.trim(), password }
       const result = isSignup ? await registerAccount(payload) : await loginAccount(payload)
       await setTokens(result.tokens)
+      const completed = await readOnboardingCompleted()
+      setHasCompletedOnboarding(completed)
+      if (!completed) {
+        setOnboardingStep(1)
+        setWebsiteAccessGranted(null)
+        setShowOnboarding(true)
+      }
       setCurrentUser(result.user)
       setPassword('')
       setNotice(isSignup ? 'Your account has been created successfully.' : 'You are now signed in.')
@@ -109,6 +318,13 @@ function App() {
     try {
       const result = await loginWithGoogle()
       await setTokens(result.tokens)
+      const completed = await readOnboardingCompleted()
+      setHasCompletedOnboarding(completed)
+      if (!completed) {
+        setOnboardingStep(1)
+        setWebsiteAccessGranted(null)
+        setShowOnboarding(true)
+      }
       setCurrentUser(result.user)
       setNotice('You are now signed in with Google.')
     } catch (error) {
@@ -127,6 +343,7 @@ function App() {
     } finally {
       await clearTokens()
       setCurrentUser(null)
+      setShowOnboarding(false)
       setMode('signin')
       setNotice('You have been signed out.')
     }
@@ -135,6 +352,64 @@ function App() {
 
   if (isCheckingSession) {
     return <main className="grid min-h-svh place-items-center bg-[#080808] text-sm text-[#bcbcbc]">Loading your session…</main>
+  }
+
+  const closeOnboardingTab = () => {
+    const tabs = globalThis.chrome?.tabs
+    if (!tabs?.getCurrent || !tabs?.remove) {
+      setShowOnboarding(false)
+      return
+    }
+    tabs.getCurrent((tab) => {
+      if (tab?.id === undefined) {
+        setShowOnboarding(false)
+        return
+      }
+      tabs.remove(tab.id, () => {
+        if (chrome.runtime.lastError) setShowOnboarding(false)
+      })
+    })
+  }
+
+  const handleContinueOnboarding = () => {
+    const permissions = globalThis.chrome?.permissions
+    // The permissions API call is made directly from the Continue click so Chrome
+    // can associate the prompt with an explicit user gesture.
+    if (!permissions?.request) {
+      setWebsiteAccessGranted(null)
+      setOnboardingStep(3)
+      return
+    }
+    permissions.request({ origins: ['<all_urls>'] }, (granted) => {
+      const failed = Boolean(chrome.runtime.lastError)
+      setWebsiteAccessGranted(failed ? false : Boolean(granted))
+      setOnboardingStep(3)
+    })
+  }
+
+  const handleFinishOnboarding = async () => {
+    try {
+      await writeOnboardingCompleted()
+      setHasCompletedOnboarding(true)
+      setShowOnboarding(false)
+      closeOnboardingTab()
+    } catch {
+      setNotice('Your setup is complete, but we could not save the setup status. It may appear again next time.')
+      setShowOnboarding(false)
+    }
+  }
+
+  if (currentUser && showOnboarding && !hasCompletedOnboarding) {
+    return (
+      <OnboardingScreen
+        step={onboardingStep}
+        onNext={() => setOnboardingStep(2)}
+        onContinue={handleContinueOnboarding}
+        onFinish={handleFinishOnboarding}
+        onClose={closeOnboardingTab}
+        websiteAccessGranted={websiteAccessGranted}
+      />
+    )
   }
 
   if (currentUser) {
