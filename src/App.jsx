@@ -678,41 +678,41 @@ function MainChatPanel({ currentUser, onLogout }) {
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-        <div className="flex min-h-full flex-col justify-center py-2">
-          <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full border border-[#ffdc00]/55 bg-[#ffdc00]/[0.07] text-[#ffdc00] shadow-[0_0_40px_rgba(255,220,0,.08)]">
-            <Sparkles size={27} />
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
+        <div className="flex min-h-full flex-col justify-center py-1">
+          <div className="mx-auto mb-2 grid size-11 place-items-center rounded-full border border-[#ffdc00]/55 bg-[#ffdc00]/[0.07] text-[#ffdc00] shadow-[0_0_40px_rgba(255,220,0,.08)]">
+            <Sparkles size={21} />
           </div>
-          <h1 className="text-center text-[30px] font-bold tracking-tight">
+          <h1 className="text-center text-[24px] font-bold leading-8 tracking-tight">
             Hi there!
           </h1>
-          <p className="mx-auto mt-1 max-w-[290px] text-center text-[15px] leading-6 text-[#a9a9b1]">
+          <p className="mx-auto mt-0.5 max-w-[260px] text-center text-[12.5px] leading-5 text-[#a9a9b1]">
             Ask, summarize, write, or research anything on this page.
           </p>
-          <div className="mt-7 grid grid-cols-2 gap-3">
+          <div className="mt-4 grid grid-cols-2 gap-2">
             {QUICK_ACTIONS.map(
               ({ icon: Icon, title, detail, prompt: suggestedPrompt }) => (
                 <button
                   key={title}
                   type="button"
                   onClick={() => handleQuickAction(suggestedPrompt)}
-                  className="group flex min-h-[112px] min-w-0 items-center gap-3 rounded-2xl border border-white/[0.12] bg-gradient-to-br from-[#19191b] to-[#111113] p-3 text-left transition hover:border-[#ffdc00]/45 hover:bg-[#1b1b1b]"
+                  className="group flex min-h-[60px] min-w-0 items-center gap-2 rounded-xl border border-white/[0.12] bg-gradient-to-br from-[#19191b] to-[#111113] p-2.5 text-left transition hover:border-[#ffdc00]/45 hover:bg-[#1b1b1b]"
                 >
                   <Icon
-                    size={25}
+                    size={20}
                     className="shrink-0 text-[#ffdc00]"
                     strokeWidth={1.7}
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-medium leading-5">
+                    <span className="block text-[12px] font-medium leading-4">
                       {title}
                     </span>
-                    <span className="block text-[13px] leading-5 text-[#d0d0d4]">
+                    <span className="block text-[12px] leading-4 text-[#d0d0d4]">
                       {detail}
                     </span>
                   </span>
                   <ArrowRight
-                    size={15}
+                    size={13}
                     className="shrink-0 text-[#d4d4d9] transition group-hover:translate-x-0.5"
                   />
                 </button>
@@ -721,7 +721,7 @@ function MainChatPanel({ currentUser, onLogout }) {
           </div>
           {status && (
             <p
-              className="mt-4 rounded-xl border border-[#ffdc00]/20 bg-[#ffdc00]/[0.06] px-3 py-2.5 text-xs leading-5 text-[#d9d2a2]"
+              className="mt-3 rounded-lg border border-[#ffdc00]/20 bg-[#ffdc00]/[0.06] px-2.5 py-2 text-[11px] leading-4 text-[#d9d2a2]"
               role="status"
             >
               {status}
@@ -730,15 +730,15 @@ function MainChatPanel({ currentUser, onLogout }) {
         </div>
       </div>
 
-      <div className="shrink-0 px-3 pb-3 pt-1">
-        <div className="mb-2 flex min-w-0 items-center gap-2 rounded-lg border border-white/[0.10] bg-[#171719] px-3 py-2 text-xs text-[#b8b8c0]">
+      <div className="shrink-0 px-3 pb-2 pt-1">
+        <div className="mb-1.5 flex min-w-0 items-center gap-2 rounded-lg border border-white/[0.10] bg-[#171719] px-2.5 py-1.5 text-[11px] text-[#b8b8c0]">
           <PanelRight size={14} className="shrink-0 text-[#b1b1b9]" />
           <span className="min-w-0 flex-1 truncate">{pageTitle}</span>
           <ChevronDown size={14} className="shrink-0 text-[#92929a]" />
         </div>
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl border border-white/[0.14] bg-[#121214] p-3 shadow-[0_8px_28px_rgba(0,0,0,.22)] focus-within:border-[#ffdc00]/80"
+          className="rounded-xl border border-white/[0.14] bg-[#121214] p-2 shadow-[0_8px_28px_rgba(0,0,0,.22)] focus-within:border-[#ffdc00]/80"
         >
           <textarea
             value={prompt}
@@ -754,7 +754,7 @@ function MainChatPanel({ currentUser, onLogout }) {
             }}
             rows={2}
             placeholder="Ask Lurph anything about this page..."
-            className="max-h-28 min-h-[58px] w-full resize-none bg-transparent px-1 py-1 text-sm leading-5 text-[#f4f4f7] outline-none placeholder:text-[#898991]"
+            className="max-h-24 min-h-[40px] w-full resize-none bg-transparent px-1 py-0.5 text-[13px] leading-5 text-[#f4f4f7] outline-none placeholder:text-[#898991]"
             aria-label="Ask Lurph"
           />
           {attachedFileName && (
@@ -762,7 +762,7 @@ function MainChatPanel({ currentUser, onLogout }) {
               Attached: {attachedFileName}
             </p>
           )}
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-1.5 pt-1">
             <input
               type="file"
               className="hidden"
@@ -772,18 +772,18 @@ function MainChatPanel({ currentUser, onLogout }) {
             <label
               htmlFor="lurph-attachment"
               title="Attach a file"
-              className="grid size-8 cursor-pointer place-items-center rounded-lg text-[#a8a8b0] transition hover:bg-white/[0.06] hover:text-white"
+              className="grid size-7 cursor-pointer place-items-center rounded-lg text-[#a8a8b0] transition hover:bg-white/[0.06] hover:text-white"
             >
-              <Paperclip size={18} />
+              <Paperclip size={16} />
             </label>
             <button
               type="button"
               onClick={() => setWebSearchEnabled((enabled) => !enabled)}
               title="Toggle web search"
               aria-pressed={webSearchEnabled}
-              className={`grid size-8 place-items-center rounded-lg transition hover:bg-white/[0.06] ${webSearchEnabled ? "bg-[#ffdc00]/[0.12] text-[#ffdc00]" : "text-[#a8a8b0] hover:text-white"}`}
+              className={`grid size-7 place-items-center rounded-lg transition hover:bg-white/[0.06] ${webSearchEnabled ? "bg-[#ffdc00]/[0.12] text-[#ffdc00]" : "text-[#a8a8b0] hover:text-white"}`}
             >
-              <Globe size={18} />
+              <Globe size={16} />
             </button>
             <span className="flex-1 truncate text-[11px] text-[#8e8e96]">
               {webSearchEnabled ? "Web search enabled" : "Ready when you are"}
@@ -793,13 +793,13 @@ function MainChatPanel({ currentUser, onLogout }) {
               disabled={!prompt.trim()}
               title="Send message"
               aria-label="Send message"
-              className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#ffdc00] text-[#171600] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
+              className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#ffdc00] text-[#171600] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <ArrowUp size={21} strokeWidth={2.5} />
+              <ArrowUp size={18} strokeWidth={2.5} />
             </button>
           </div>
         </form>
-        <p className="mt-2 truncate text-center text-[10px] text-[#696970]">
+        <p className="mt-1.5 truncate text-center text-[10px] leading-4 text-[#696970]">
           Lurph can make mistakes. Check important information.
         </p>
       </div>
