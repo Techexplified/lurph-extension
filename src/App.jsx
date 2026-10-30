@@ -611,6 +611,32 @@ function MainChatPanel({ currentUser, onLogout }) {
           >
             <ExternalLink size={17} />
           </button>
+          <button
+            type="button"
+            onClick={() =>
+              setStatus(
+                "Chat history will appear here when conversation history is connected.",
+              )
+            }
+            title="History"
+            aria-label="History"
+            className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
+          >
+            <History size={19} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPrompt("");
+              setStatus("");
+              setAttachedFileName("");
+            }}
+            title="New chat"
+            aria-label="New chat"
+            className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
+          >
+            <Plus size={21} />
+          </button>
           <div className="relative">
             <button
               type="button"
@@ -649,32 +675,6 @@ function MainChatPanel({ currentUser, onLogout }) {
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() =>
-              setStatus(
-                "Chat history will appear here when conversation history is connected.",
-              )
-            }
-            title="History"
-            aria-label="History"
-            className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
-          >
-            <History size={19} />
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setPrompt("");
-              setStatus("");
-              setAttachedFileName("");
-            }}
-            title="New chat"
-            aria-label="New chat"
-            className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
-          >
-            <Plus size={21} />
-          </button>
         </div>
       </header>
 
@@ -738,7 +738,7 @@ function MainChatPanel({ currentUser, onLogout }) {
         </div>
         <form
           onSubmit={handleSubmit}
-          className="rounded-xl border border-white/[0.14] bg-[#121214] p-2 shadow-[0_8px_28px_rgba(0,0,0,.22)] focus-within:border-[#ffdc00]/80"
+          className="rounded-xl border border-[#ffdc00]/80 bg-[#121214] p-2 shadow-[0_8px_28px_rgba(0,0,0,.22)] focus-within:border-[#ffdc00]/80"
         >
           <textarea
             value={prompt}
