@@ -558,82 +558,34 @@ function MainChatPanel({ currentUser, onLogout }) {
 
   return (
     <main className="lurph-chat-shell flex h-dvh min-h-[480px] w-full flex-col overflow-hidden bg-[#0a0a0b] text-[#f5f5f7]">
-      <header className="flex shrink-0 items-center justify-between gap-2 px-4 pb-2 pt-4">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#ffdc00] pb-1 pr-1 text-[25px] font-black leading-none tracking-[-3px] text-[#171600] shadow-[0_0_24px_rgba(255,220,0,.14)]">
-            L
-          </span>
-          <span className="truncate text-[17px] font-bold tracking-tight">
-            Lurph <span className="text-[#ffdc00]">AI</span>
-          </span>
-        </div>
-        <div className="relative flex shrink-0 items-center gap-1">
-          <button
-            type="button"
-            onClick={openFullPage}
-            title="Open in a tab"
-            aria-label="Open Lurph in a tab"
-            className="grid size-8 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
-          >
-            <ExternalLink size={17} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsMoreMenuOpen((open) => !open)}
-            title="More options"
-            aria-label="More options"
-            className="grid size-8 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
-          >
-            <MoreHorizontal size={20} />
-          </button>
-          {isMoreMenuOpen && (
-            <div className="absolute right-0 top-9 z-30 w-52 rounded-xl border border-white/[0.12] bg-[#19191c] p-1.5 shadow-2xl">
-              <div className="border-b border-white/[0.08] px-3 py-2">
-                <p className="truncate text-sm font-semibold">
-                  {currentUser?.name || "Lurph user"}
-                </p>
-                <p className="truncate text-xs text-[#96969d]">
-                  {currentUser?.email || ""}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={openFullPage}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-[#dedee2] hover:bg-white/[0.06]"
-              >
-                <ExternalLink size={15} /> Open in a tab
-              </button>
-              <button
-                type="button"
-                onClick={onLogout}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-[#ff9b9b] hover:bg-white/[0.06]"
-              >
-                <LogOut size={15} /> Sign out
-              </button>
-            </div>
-          )}
-        </div>
-      </header>
-
-      <div className="flex shrink-0 items-center gap-2 px-4 pb-3 pt-1">
+      <header className="flex shrink-0 items-center gap-2 px-4 pb-3 pt-4">
+        {/* The model selector replaces the duplicate in-panel Lurph AI heading. */}
         <div className="relative min-w-0 flex-1">
           <button
             type="button"
             onClick={() => setIsModelMenuOpen((open) => !open)}
-            className="flex h-10 max-w-full items-center gap-2 rounded-xl border border-white/[0.12] bg-[#151517] px-3 text-sm transition hover:bg-[#1c1c1f]"
+            aria-haspopup="listbox"
+            aria-expanded={isModelMenuOpen}
+            title="Choose AI model"
+            className="flex h-10 w-full min-w-0 max-w-[180px] items-center gap-2 rounded-xl border border-white/[0.12] bg-[#151517] px-3 text-sm transition hover:bg-[#1c1c1f]"
           >
             <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#252b50] text-[10px] font-bold text-[#d8ddff]">
               ✦
             </span>
-            <span className="truncate">{model}</span>
+            <span className="min-w-0 flex-1 truncate text-left">{model}</span>
             <ChevronDown size={15} className="shrink-0 text-[#a4a4aa]" />
           </button>
           {isModelMenuOpen && (
-            <div className="absolute left-0 top-12 z-30 w-56 rounded-xl border border-white/[0.12] bg-[#19191c] p-1.5 shadow-2xl">
+            <div
+              role="listbox"
+              className="absolute left-0 top-12 z-40 w-56 rounded-xl border border-white/[0.12] bg-[#19191c] p-1.5 shadow-2xl"
+            >
               {CHAT_MODELS.map((item) => (
                 <button
                   key={item}
                   type="button"
+                  role="option"
+                  aria-selected={model === item}
                   onClick={() => {
                     setModel(item);
                     setIsModelMenuOpen(false);
@@ -647,33 +599,84 @@ function MainChatPanel({ currentUser, onLogout }) {
             </div>
           )}
         </div>
-        <button
-          type="button"
-          onClick={() =>
-            setStatus(
-              "Chat history will appear here when conversation history is connected.",
-            )
-          }
-          title="History"
-          aria-label="History"
-          className="grid size-9 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
-        >
-          <History size={19} />
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setPrompt("");
-            setStatus("");
-            setAttachedFileName("");
-          }}
-          title="New chat"
-          aria-label="New chat"
-          className="grid size-9 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
-        >
-          <Plus size={21} />
-        </button>
-      </div>
+
+        {/* Keep all four header actions grouped on one line at the right. */}
+        <div className="flex shrink-0 items-center gap-0.5">
+          <button
+            type="button"
+            onClick={openFullPage}
+            title="Open in a tab"
+            aria-label="Open Lurph in a tab"
+            className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
+          >
+            <ExternalLink size={17} />
+          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsMoreMenuOpen((open) => !open)}
+              title="More options"
+              aria-label="More options"
+              aria-expanded={isMoreMenuOpen}
+              className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
+            >
+              <MoreHorizontal size={20} />
+            </button>
+            {isMoreMenuOpen && (
+              <div className="absolute right-0 top-9 z-40 w-52 rounded-xl border border-white/[0.12] bg-[#19191c] p-1.5 shadow-2xl">
+                <div className="border-b border-white/[0.08] px-3 py-2">
+                  <p className="truncate text-sm font-semibold">
+                    {currentUser?.name || "Lurph user"}
+                  </p>
+                  <p className="truncate text-xs text-[#96969d]">
+                    {currentUser?.email || ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={openFullPage}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-[#dedee2] hover:bg-white/[0.06]"
+                >
+                  <ExternalLink size={15} /> Open in a tab
+                </button>
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-[#ff9b9b] hover:bg-white/[0.06]"
+                >
+                  <LogOut size={15} /> Sign out
+                </button>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              setStatus(
+                "Chat history will appear here when conversation history is connected.",
+              )
+            }
+            title="History"
+            aria-label="History"
+            className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
+          >
+            <History size={19} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPrompt("");
+              setStatus("");
+              setAttachedFileName("");
+            }}
+            title="New chat"
+            aria-label="New chat"
+            className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
+          >
+            <Plus size={21} />
+          </button>
+        </div>
+      </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
         <div className="flex min-h-full flex-col justify-center py-2">
