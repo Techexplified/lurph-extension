@@ -21,7 +21,6 @@ import {
   Puzzle,
   Pin,
   ArrowRight,
-  X,
   ChevronDown,
   ExternalLink,
   FileText,
@@ -110,25 +109,6 @@ async function writeOnboardingCompleted() {
     return;
   }
   localStorage.setItem(ONBOARDING_STORAGE_KEY, "true");
-}
-
-function BrandHeader({ onClose }) {
-  return (
-    <header className="ob-header flex shrink-0 items-center gap-2.5">
-      <span className="grid size-9 place-items-center rounded-lg bg-[#ffdc00] pb-1 pr-1 text-[25px] font-black leading-none tracking-[-3px] text-[#171600]">
-        L
-      </span>
-      <span className="text-lg font-bold tracking-tight">Lurph</span>
-      <button
-        type="button"
-        onClick={onClose}
-        className="ml-auto grid size-8 place-items-center rounded-lg text-xl text-[#a0a0a0] transition hover:bg-white/[0.06] hover:text-white"
-        aria-label="Close onboarding"
-      >
-        <X size={19} />
-      </button>
-    </header>
-  );
 }
 
 function OnboardingProgress({ step }) {
@@ -222,7 +202,6 @@ function OnboardingScreen({
   onNext,
   onContinue,
   onFinish,
-  onClose,
   websiteAccessGranted,
 }) {
   const features = [
@@ -269,9 +248,8 @@ function OnboardingScreen({
   if (step === 1) {
     return (
       <main className="ob-screen h-svh w-full overflow-hidden bg-[#080808] p-3 text-[#f7f7f7] sm:p-4">
-        <section className="ob-panel ob-step-panel mx-auto flex h-full min-h-0 w-full max-w-[650px] flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-gradient-to-br from-[#171717] via-[#111114] to-[#09090b] p-4 sm:p-5">
+        <section className="ob-panel ob-step-panel mx-auto flex h-full min-h-0 w-full max-w-[650px] flex-col overflow-hidden bg-[#080808] p-4 sm:p-5">
           <div className="pointer-events-none absolute" />
-          <BrandHeader onClose={onClose} />
           <OnboardingProgress step={1} />
           <div className="ob-intro mt-4 shrink-0 text-center">
             <h1 className="text-[clamp(25px,3.3vh,34px)] font-bold tracking-tight">
@@ -319,8 +297,7 @@ function OnboardingScreen({
   if (step === 2) {
     return (
       <main className="ob-screen h-svh w-full overflow-hidden bg-[#080808] p-3 text-[#f7f7f7] sm:p-4">
-        <section className="ob-panel ob-step-panel mx-auto flex h-full min-h-0 w-full max-w-[650px] flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-gradient-to-br from-[#111] to-[#080808] p-4 sm:p-5">
-          <BrandHeader onClose={onClose} />
+        <section className="ob-panel ob-step-panel mx-auto flex h-full min-h-0 w-full max-w-[650px] flex-col overflow-hidden bg-[#080808] p-4 sm:p-5">
           <OnboardingProgress step={2} />
           <div className="ob-intro mt-4 shrink-0 text-center">
             <h1 className="text-[clamp(22px,3vh,30px)] font-bold tracking-tight">
@@ -391,8 +368,7 @@ function OnboardingScreen({
 
   return (
     <main className="ob-screen h-svh w-full overflow-hidden bg-[#080808] p-3 text-[#f7f7f7] sm:p-4">
-      <section className="ob-panel ob-final-panel mx-auto flex h-full min-h-0 w-full max-w-[1370px] flex-col overflow-hidden rounded-2xl border border-white/[0.12] bg-gradient-to-br from-[#111] to-[#080808] p-4 sm:p-5 lg:p-6">
-        <BrandHeader onClose={onClose} />
+      <section className="ob-panel ob-final-panel mx-auto flex h-full min-h-0 w-full max-w-[1370px] flex-col overflow-hidden bg-[#080808] p-4 sm:p-5 lg:p-6">
         <OnboardingProgress step={3} />
         <div className="ob-final-hero mt-2 shrink-0 text-center">
           <div className="relative mx-auto grid size-11 place-items-center rounded-xl bg-[#ffdc00] text-3xl font-black leading-none tracking-[-3px] text-[#171600] shadow-[0_0_30px_rgba(255,220,0,0.18)]">
@@ -1028,7 +1004,6 @@ function App() {
         onNext={() => setOnboardingStep(2)}
         onContinue={handleContinueOnboarding}
         onFinish={handleFinishOnboarding}
-        onClose={closeOnboardingTab}
         websiteAccessGranted={websiteAccessGranted}
       />
     );
