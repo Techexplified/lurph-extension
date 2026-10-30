@@ -1003,6 +1003,13 @@ function App() {
   const handleFinishOnboarding = async () => {
     try {
       await writeOnboardingCompleted();
+      // Enable toolbar-click side-panel behavior only after onboarding finishes.
+      // This keeps first-time users in the planned sign-in/setup tab flow.
+      if (globalThis.chrome?.sidePanel?.setPanelBehavior) {
+        await chrome.sidePanel.setPanelBehavior({
+          openPanelOnActionClick: true,
+        });
+      }
       setHasCompletedOnboarding(true);
       setShowOnboarding(false);
       closeOnboardingTab();
@@ -1032,7 +1039,7 @@ function App() {
   }
 
   return (
-    <main className="min-h-svh w-full overflow-y-auto bg-[#080808] text-[#f7f7f7] md:h-svh md:overflow-hidden">
+    <main className="auth-scroll-container h-dvh min-h-0 w-full overflow-x-hidden overflow-y-auto overscroll-y-contain bg-[#080808] text-[#f7f7f7]">
       <section
         className="grid min-h-svh w-full grid-cols-1 md:h-svh md:min-h-0 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]"
         aria-label="Lurph account access"
