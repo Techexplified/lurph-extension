@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { clearTokens, getTokens, setTokens } from "./lib/tokenStorage.js";
 import {
   getCurrentUser,
@@ -7,6 +7,7 @@ import {
   logoutAccount,
   registerAccount,
 } from "./services/authApi.js";
+import { sendChatMessage } from "./services/chatApi.js";
 import {
   Check,
   Eye,
@@ -463,11 +464,11 @@ function OnboardingScreen({
 }
 
 const CHAT_MODELS = [
-  "GPT-4o",
-  "Claude 3.7 Sonnet",
-  "Gemini 2.5 Flash",
-  "Llama 3.3",
-  "DeepSeek V3",
+  { key: "gpt-4o", label: "GPT-4o" },
+  { key: "claude-sonnet", label: "Claude Sonnet" },
+  { key: "gemini-flash", label: "Gemini Flash" },
+  { key: "llama-3.3", label: "Llama 3.3" },
+  { key: "deepseek-v3", label: "DeepSeek V3" },
 ];
 
 const QUICK_ACTIONS = [
@@ -497,15 +498,77 @@ const QUICK_ACTIONS = [
   },
 ];
 
+const MAX_PAGE_TEXT_CHARS = 16000;
+const MAX_ATTACHMENT_TEXT_CHARS = 20000;
+
+async function readActivePageContext() {
+  const chromeApi = globalThis.chrome;
+  if (!chromeApi?.tabs?.query) return null;
+
+  try {
+    const [tab] = await chromeApi.tabs.query({
+      active: true,
+      lastFocusedWindow: true,
+    });
+    if (!tab?.id) return null;
+
+    const fallback = {
+      title: tab.title || "Current tab",
+      url: tab.url || "",
+      text: "",
+    };
+
+    if (!chromeApi.scripting?.executeScript) return fallback;
+
+    const [injection] = await chromeApi.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: (maxChars) => ({
+        title: document.title || "Current tab",
+        url: window.location.href,
+        text: (document.body?.innerText || "").slice(0, maxChars),
+      }),
+      args: [MAX_PAGE_TEXT_CHARS],
+    });
+
+    return injection?.result
+      ? {
+          title: String(injection.result.title || fallback.title).slice(0, 300),
+          url: String(injection.result.url || fallback.url).slice(0, 2000),
+          text: String(injection.result.text || "").slice(
+            0,
+            MAX_PAGE_TEXT_CHARS,
+          ),
+        }
+      : fallback;
+  } catch {
+    // Restricted pages (chrome://, Chrome Web Store, PDF viewers, etc.) cannot
+    // be injected into. Continue with the user's prompt without page text.
+    return null;
+  }
+}
+
+function createChatMessageId() {
+  return (
+    globalThis.crypto?.randomUUID?.() ||
+    `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  );
+}
+
 function MainChatPanel({ currentUser, onLogout }) {
-  const [model, setModel] = useState("GPT-4o");
+  const [model, setModel] = useState("gpt-4o");
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [pageTitle, setPageTitle] = useState("Current tab");
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [attachedFileName, setAttachedFileName] = useState("");
+  const [attachedFileText, setAttachedFileText] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [isSending, setIsSending] = useState(false);
   const [status, setStatus] = useState("");
+  const messagesEndRef = useRef(null);
+  const selectedModel =
+    CHAT_MODELS.find((item) => item.key === model) || CHAT_MODELS[0];
 
   useEffect(() => {
     let active = true;
@@ -521,6 +584,13 @@ function MainChatPanel({ currentUser, onLogout }) {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, [messages, isSending]);
 
   const openFullPage = () => {
     const url = globalThis.chrome?.runtime?.getURL?.("index.html");
@@ -538,28 +608,103 @@ function MainChatPanel({ currentUser, onLogout }) {
     setStatus("");
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!prompt.trim()) return;
-    setStatus(
-      "The Lurph chat UI is ready. AI response generation is not connected yet.",
-    );
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt || isSending) return;
+
+    const userMessage = {
+      id: createChatMessageId(),
+      role: "user",
+      content: trimmedPrompt,
+    };
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
+    setPrompt("");
+    setIsSending(true);
+    setStatus("");
+
+    try {
+      const pageContext = await readActivePageContext();
+      if (pageContext?.title) setPageTitle(pageContext.title);
+
+      const result = await sendChatMessage({
+        model,
+        messages: nextMessages
+          .slice(-16)
+          .map(({ role, content }) => ({ role, content })),
+        pageContext,
+        attachment: attachedFileText
+          ? { name: attachedFileName, text: attachedFileText }
+          : undefined,
+        webSearchEnabled,
+      });
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: createChatMessageId(),
+          role: "assistant",
+          content: result.reply,
+          model: result.providerModel || selectedModel.label,
+        },
+      ]);
+      setAttachedFileName("");
+      setAttachedFileText("");
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        (error.code === "ECONNABORTED"
+          ? "Lurph took too long to respond. Please try again."
+          : error.code === "ERR_NETWORK"
+            ? "Unable to reach the Lurph server. Check your connection and API deployment."
+            : error.message ||
+              "Something went wrong while generating the response.");
+      setStatus(message);
+    } finally {
+      setIsSending(false);
+    }
   };
 
-  const handleAttach = (event) => {
+  const handleAttach = async (event) => {
     const file = event.target.files?.[0];
-    if (file) {
+    event.target.value = "";
+    if (!file) return;
+
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    const supported = ["txt", "md", "csv", "json"];
+    if (!supported.includes(extension)) {
+      setStatus("For now, Lurph can read TXT, MD, CSV, and JSON attachments.");
+      return;
+    }
+    if (file.size > 200 * 1024) {
+      setStatus("Please attach a text file smaller than 200 KB.");
+      return;
+    }
+
+    try {
+      const text = (await file.text()).slice(0, MAX_ATTACHMENT_TEXT_CHARS);
       setAttachedFileName(file.name);
+      setAttachedFileText(text);
+      setStatus("");
+    } catch {
       setStatus(
-        "File selected. File processing will be available when chat services are connected.",
+        "Could not read this attachment. Please try another text file.",
       );
     }
+  };
+
+  const handleNewChat = () => {
+    setMessages([]);
+    setPrompt("");
+    setStatus("");
+    setAttachedFileName("");
+    setAttachedFileText("");
   };
 
   return (
     <main className="lurph-chat-shell flex h-dvh min-h-[480px] w-full flex-col overflow-hidden bg-[#0a0a0b] text-[#f5f5f7]">
       <header className="flex shrink-0 items-center gap-2 px-4 pb-3 pt-4">
-        {/* The model selector replaces the duplicate in-panel Lurph AI heading. */}
         <div className="relative min-w-0 flex-1">
           <button
             type="button"
@@ -572,7 +717,9 @@ function MainChatPanel({ currentUser, onLogout }) {
             <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#252b50] text-[10px] font-bold text-[#d8ddff]">
               ✦
             </span>
-            <span className="min-w-0 flex-1 truncate text-left">{model}</span>
+            <span className="min-w-0 flex-1 truncate text-left">
+              {selectedModel.label}
+            </span>
             <ChevronDown size={15} className="shrink-0 text-[#a4a4aa]" />
           </button>
           {isModelMenuOpen && (
@@ -582,25 +729,26 @@ function MainChatPanel({ currentUser, onLogout }) {
             >
               {CHAT_MODELS.map((item) => (
                 <button
-                  key={item}
+                  key={item.key}
                   type="button"
                   role="option"
-                  aria-selected={model === item}
+                  aria-selected={model === item.key}
                   onClick={() => {
-                    setModel(item);
+                    setModel(item.key);
                     setIsModelMenuOpen(false);
                   }}
-                  className={`flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm transition hover:bg-white/[0.06] ${model === item ? "text-[#ffdc00]" : "text-[#dfdfe3]"}`}
+                  className={`flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm transition hover:bg-white/[0.06] ${model === item.key ? "text-[#ffdc00]" : "text-[#dfdfe3]"}`}
                 >
-                  {item}
-                  {model === item && <Check size={15} className="ml-auto" />}
+                  {item.label}
+                  {model === item.key && (
+                    <Check size={15} className="ml-auto" />
+                  )}
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* Keep all four header actions grouped on one line at the right. */}
         <div className="flex shrink-0 items-center gap-0.5">
           <button
             type="button"
@@ -615,7 +763,7 @@ function MainChatPanel({ currentUser, onLogout }) {
             type="button"
             onClick={() =>
               setStatus(
-                "Chat history will appear here when conversation history is connected.",
+                "Chat history is not saved yet. Conversation persistence will be added separately.",
               )
             }
             title="History"
@@ -626,11 +774,7 @@ function MainChatPanel({ currentUser, onLogout }) {
           </button>
           <button
             type="button"
-            onClick={() => {
-              setPrompt("");
-              setStatus("");
-              setAttachedFileName("");
-            }}
+            onClick={handleNewChat}
             title="New chat"
             aria-label="New chat"
             className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
@@ -679,55 +823,86 @@ function MainChatPanel({ currentUser, onLogout }) {
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
-        <div className="flex min-h-full flex-col justify-center py-1">
-          <div className="mx-auto mb-2 grid size-11 place-items-center rounded-full border border-[#ffdc00]/55 bg-[#ffdc00]/[0.07] text-[#ffdc00] shadow-[0_0_40px_rgba(255,220,0,.08)]">
-            <Sparkles size={21} />
-          </div>
-          <h1 className="text-center text-[24px] font-bold leading-8 tracking-tight">
-            Hi there!
-          </h1>
-          <p className="mx-auto mt-0.5 max-w-[260px] text-center text-[12.5px] leading-5 text-[#a9a9b1]">
-            Ask, summarize, write, or research anything on this page.
-          </p>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {QUICK_ACTIONS.map(
-              ({ icon: Icon, title, detail, prompt: suggestedPrompt }) => (
-                <button
-                  key={title}
-                  type="button"
-                  onClick={() => handleQuickAction(suggestedPrompt)}
-                  className="group flex min-h-[60px] min-w-0 items-center gap-2 rounded-xl border border-white/[0.12] bg-gradient-to-br from-[#19191b] to-[#111113] p-2.5 text-left transition hover:border-[#ffdc00]/45 hover:bg-[#1b1b1b]"
-                >
-                  <Icon
-                    size={20}
-                    className="shrink-0 text-[#ffdc00]"
-                    strokeWidth={1.7}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[12px] font-medium leading-4">
-                      {title}
-                    </span>
-                    <span className="block text-[12px] leading-4 text-[#d0d0d4]">
-                      {detail}
-                    </span>
-                  </span>
-                  <ArrowRight
-                    size={13}
-                    className="shrink-0 text-[#d4d4d9] transition group-hover:translate-x-0.5"
-                  />
-                </button>
-              ),
-            )}
-          </div>
-          {status && (
-            <p
-              className="mt-3 rounded-lg border border-[#ffdc00]/20 bg-[#ffdc00]/[0.06] px-2.5 py-2 text-[11px] leading-4 text-[#d9d2a2]"
-              role="status"
-            >
-              {status}
+        {messages.length === 0 ? (
+          <div className="flex min-h-full flex-col justify-center py-1">
+            <div className="mx-auto mb-2 grid size-11 place-items-center rounded-full border border-[#ffdc00]/55 bg-[#ffdc00]/[0.07] text-[#ffdc00] shadow-[0_0_40px_rgba(255,220,0,.08)]">
+              <Sparkles size={21} />
+            </div>
+            <h1 className="text-center text-[24px] font-bold leading-8 tracking-tight">
+              Hi there!
+            </h1>
+            <p className="mx-auto mt-0.5 max-w-[260px] text-center text-[12.5px] leading-5 text-[#a9a9b1]">
+              Ask, summarize, write, or research anything on this page.
             </p>
-          )}
-        </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {QUICK_ACTIONS.map(
+                ({ icon: Icon, title, detail, prompt: suggestedPrompt }) => (
+                  <button
+                    key={title}
+                    type="button"
+                    onClick={() => handleQuickAction(suggestedPrompt)}
+                    className="group flex min-h-[60px] min-w-0 items-center gap-2 rounded-xl border border-white/[0.12] bg-gradient-to-br from-[#19191b] to-[#111113] p-2.5 text-left transition hover:border-[#ffdc00]/45 hover:bg-[#1b1b1b]"
+                  >
+                    <Icon
+                      size={20}
+                      className="shrink-0 text-[#ffdc00]"
+                      strokeWidth={1.7}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12px] font-medium leading-4">
+                        {title}
+                      </span>
+                      <span className="block text-[12px] leading-4 text-[#d0d0d4]">
+                        {detail}
+                      </span>
+                    </span>
+                    <ArrowRight
+                      size={13}
+                      className="shrink-0 text-[#d4d4d9] transition group-hover:translate-x-0.5"
+                    />
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="mx-auto flex w-full max-w-[760px] flex-col gap-3 py-3">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={
+                  message.role === "user"
+                    ? "ml-auto max-w-[88%] rounded-2xl rounded-br-sm border border-[#ffdc00]/20 bg-[#ffdc00]/[0.10] px-3.5 py-3 text-[13px] leading-6 text-[#f5f2dc]"
+                    : "mr-auto w-full rounded-xl border border-white/[0.08] bg-[#141416] px-3.5 py-3 text-[13px] leading-6 text-[#e7e7eb]"
+                }
+              >
+                {message.role === "assistant" && (
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#ffdc00]">
+                    Lurph
+                  </p>
+                )}
+                <div className="whitespace-pre-wrap break-words">
+                  {message.content}
+                </div>
+              </div>
+            ))}
+            {isSending && (
+              <div className="mr-auto flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#141416] px-3.5 py-3 text-xs text-[#aaa9ad]">
+                <span className="size-2 animate-pulse rounded-full bg-[#ffdc00]" />{" "}
+                Lurph is thinking…
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
+        {status && (
+          <p
+            className="mx-auto mt-2 max-w-[760px] rounded-lg border border-[#ffdc00]/20 bg-[#ffdc00]/[0.06] px-2.5 py-2 text-[11px] leading-4 text-[#d9d2a2]"
+            role="status"
+          >
+            {status}
+          </p>
+        )}
       </div>
 
       <div className="shrink-0 px-3 pb-2 pt-1">
@@ -767,11 +942,12 @@ function MainChatPanel({ currentUser, onLogout }) {
               type="file"
               className="hidden"
               id="lurph-attachment"
+              accept=".txt,.md,.csv,.json,text/plain,text/markdown,text/csv,application/json"
               onChange={handleAttach}
             />
             <label
               htmlFor="lurph-attachment"
-              title="Attach a file"
+              title="Attach a text file"
               className="grid size-7 cursor-pointer place-items-center rounded-lg text-[#a8a8b0] transition hover:bg-white/[0.06] hover:text-white"
             >
               <Paperclip size={16} />
@@ -786,11 +962,15 @@ function MainChatPanel({ currentUser, onLogout }) {
               <Globe size={16} />
             </button>
             <span className="flex-1 truncate text-[11px] text-[#8e8e96]">
-              {webSearchEnabled ? "Web search enabled" : "Ready when you are"}
+              {isSending
+                ? "Generating response…"
+                : webSearchEnabled
+                  ? "Web search enabled"
+                  : "Ready when you are"}
             </span>
             <button
               type="submit"
-              disabled={!prompt.trim()}
+              disabled={!prompt.trim() || isSending}
               title="Send message"
               aria-label="Send message"
               className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#ffdc00] text-[#171600] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
