@@ -7,7 +7,13 @@ import {
   logoutAccount,
   registerAccount,
 } from "./services/authApi.js";
-import { sendChatMessage } from "./services/chatApi.js";
+import {
+  sendChatMessage,
+  getConversations,
+  getConversation,
+  renameConversation,
+  deleteConversation,
+} from "./services/chatApi.js";
 import {
   Check,
   Eye,
@@ -36,6 +42,11 @@ import {
   MoreHorizontal,
   PanelRight,
   LogOut,
+  Search,
+  SlidersHorizontal,
+  Pencil,
+  Trash2,
+  X,
 } from "lucide-react";
 
 const features = [
@@ -498,6 +509,7 @@ const QUICK_ACTIONS = [
   },
 ];
 
+
 const MAX_PAGE_TEXT_CHARS = 16000;
 const MAX_ATTACHMENT_TEXT_CHARS = 20000;
 
@@ -534,10 +546,7 @@ async function readActivePageContext() {
       ? {
           title: String(injection.result.title || fallback.title).slice(0, 300),
           url: String(injection.result.url || fallback.url).slice(0, 2000),
-          text: String(injection.result.text || "").slice(
-            0,
-            MAX_PAGE_TEXT_CHARS,
-          ),
+          text: String(injection.result.text || "").slice(0, MAX_PAGE_TEXT_CHARS),
         }
       : fallback;
   } catch {
@@ -547,202 +556,318 @@ async function readActivePageContext() {
   }
 }
 
+function getConversationGroup(dateValue) {
+  const date = new Date(dateValue)
+  if (Number.isNaN(date.getTime())) return 'Older'
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const itemDay = new Date(date)
+  itemDay.setHours(0, 0, 0, 0)
+  const dayDifference = Math.floor((today.getTime() - itemDay.getTime()) / 86400000)
+
+  if (dayDifference <= 0) return 'Today'
+  if (dayDifference === 1) return 'Yesterday'
+  if (dayDifference < 7) return 'Last 7 days'
+  return 'Older'
+}
+
+function formatConversationDate(dateValue) {
+  const date = new Date(dateValue)
+  if (Number.isNaN(date.getTime())) return ''
+  const group = getConversationGroup(dateValue)
+  if (group === 'Older') {
+    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date)
+  }
+  return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date)
+}
+
 function createChatMessageId() {
-  return (
-    globalThis.crypto?.randomUUID?.() ||
-    `${Date.now()}-${Math.random().toString(16).slice(2)}`
-  );
+  return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
 function MainChatPanel({ currentUser, onLogout }) {
-  const [model, setModel] = useState("gpt-4o");
-  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
-  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-  const [prompt, setPrompt] = useState("");
-  const [pageTitle, setPageTitle] = useState("Current tab");
-  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
-  const [attachedFileName, setAttachedFileName] = useState("");
-  const [attachedFileText, setAttachedFileText] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [isSending, setIsSending] = useState(false);
-  const [status, setStatus] = useState("");
-  const messagesEndRef = useRef(null);
-  const selectedModel =
-    CHAT_MODELS.find((item) => item.key === model) || CHAT_MODELS[0];
+  const [model, setModel] = useState('gpt-4o')
+  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false)
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
+  const [prompt, setPrompt] = useState('')
+  const [pageTitle, setPageTitle] = useState('Current tab')
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false)
+  const [attachedFileName, setAttachedFileName] = useState('')
+  const [attachedFileText, setAttachedFileText] = useState('')
+  const [messages, setMessages] = useState([])
+  const [conversationId, setConversationId] = useState(null)
+  const [isSending, setIsSending] = useState(false)
+  const [status, setStatus] = useState('')
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+  const [historySearch, setHistorySearch] = useState('')
+  const [historyItems, setHistoryItems] = useState([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [historyError, setHistoryError] = useState('')
+  const [historySortNewest, setHistorySortNewest] = useState(true)
+  const [openConversationMenuId, setOpenConversationMenuId] = useState(null)
+  const [renamingConversationId, setRenamingConversationId] = useState(null)
+  const [renameDraft, setRenameDraft] = useState('')
+  const [isHistoryMutation, setIsHistoryMutation] = useState(false)
+  const messagesEndRef = useRef(null)
+  const selectedModel = CHAT_MODELS.find((item) => item.key === model) || CHAT_MODELS[0]
 
   useEffect(() => {
-    let active = true;
-    const tabs = globalThis.chrome?.tabs;
-    if (!tabs?.query) return undefined;
-    tabs
-      .query({ active: true, lastFocusedWindow: true })
+    let active = true
+    const tabs = globalThis.chrome?.tabs
+    if (!tabs?.query) return undefined
+    tabs.query({ active: true, lastFocusedWindow: true })
       .then(([tab]) => {
-        if (active && tab?.title) setPageTitle(tab.title);
+        if (active && tab?.title) setPageTitle(tab.title)
       })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
-  }, [messages, isSending]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [messages, isSending])
+
+  useEffect(() => {
+    if (!isHistoryOpen) return undefined
+    let active = true
+    setIsLoadingHistory(true)
+    const timeoutId = setTimeout(async () => {
+      setHistoryError('')
+      try {
+        const result = await getConversations(historySearch)
+        if (active) setHistoryItems(result.conversations || [])
+      } catch (error) {
+        if (active) {
+          setHistoryError(error.response?.data?.message || 'Could not load your conversations. Please try again.')
+        }
+      } finally {
+        if (active) setIsLoadingHistory(false)
+      }
+    }, 220)
+
+    return () => {
+      active = false
+      clearTimeout(timeoutId)
+    }
+  }, [isHistoryOpen, historySearch])
 
   const openFullPage = () => {
-    const url = globalThis.chrome?.runtime?.getURL?.("index.html");
+    const url = globalThis.chrome?.runtime?.getURL?.('index.html')
     if (url && globalThis.chrome?.tabs?.create) {
-      chrome.tabs.create({ url });
+      chrome.tabs.create({ url })
     } else {
-      setStatus(
-        "Open Lurph from the installed Chrome extension to use the full-page view.",
-      );
+      setStatus('Open Lurph from the installed Chrome extension to use the full-page view.')
     }
-  };
+  }
 
   const handleQuickAction = (suggestedPrompt) => {
-    setPrompt(suggestedPrompt);
-    setStatus("");
-  };
-
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    const trimmedPrompt = prompt.trim();
-    if (!trimmedPrompt || isSending) return;
-
-    const userMessage = {
-      id: createChatMessageId(),
-      role: "user",
-      content: trimmedPrompt,
-    };
-    const nextMessages = [...messages, userMessage];
-    setMessages(nextMessages);
-    setPrompt("");
-    setIsSending(true);
-    setStatus("");
-
-    try {
-      const pageContext = await readActivePageContext();
-      if (pageContext?.title) setPageTitle(pageContext.title);
-
-      const result = await sendChatMessage({
-        model,
-        messages: nextMessages
-          .slice(-16)
-          .map(({ role, content }) => ({ role, content })),
-        pageContext,
-        attachment: attachedFileText
-          ? { name: attachedFileName, text: attachedFileText }
-          : undefined,
-        webSearchEnabled,
-      });
-
-      setMessages((current) => [
-        ...current,
-        {
-          id: createChatMessageId(),
-          role: "assistant",
-          content: result.reply,
-          model: result.providerModel || selectedModel.label,
-        },
-      ]);
-      setAttachedFileName("");
-      setAttachedFileText("");
-    } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        (error.code === "ECONNABORTED"
-          ? "Lurph took too long to respond. Please try again."
-          : error.code === "ERR_NETWORK"
-            ? "Unable to reach the Lurph server. Check your connection and API deployment."
-            : error.message ||
-              "Something went wrong while generating the response.");
-      setStatus(message);
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  const handleAttach = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    const extension = file.name.split(".").pop()?.toLowerCase();
-    const supported = ["txt", "md", "csv", "json"];
-    if (!supported.includes(extension)) {
-      setStatus("For now, Lurph can read TXT, MD, CSV, and JSON attachments.");
-      return;
-    }
-    if (file.size > 200 * 1024) {
-      setStatus("Please attach a text file smaller than 200 KB.");
-      return;
-    }
-
-    try {
-      const text = (await file.text()).slice(0, MAX_ATTACHMENT_TEXT_CHARS);
-      setAttachedFileName(file.name);
-      setAttachedFileText(text);
-      setStatus("");
-    } catch {
-      setStatus(
-        "Could not read this attachment. Please try another text file.",
-      );
-    }
-  };
+    setPrompt(suggestedPrompt)
+    setStatus('')
+  }
 
   const handleNewChat = () => {
-    setMessages([]);
-    setPrompt("");
-    setStatus("");
-    setAttachedFileName("");
-    setAttachedFileText("");
-  };
+    setConversationId(null)
+    setMessages([])
+    setPrompt('')
+    setStatus('')
+    setAttachedFileName('')
+    setAttachedFileText('')
+    setIsHistoryOpen(false)
+    setOpenConversationMenuId(null)
+    setRenamingConversationId(null)
+  }
+
+  const handleLoadConversation = async (item) => {
+    setIsLoadingHistory(true)
+    setHistoryError('')
+    try {
+      const result = await getConversation(item.id)
+      const conversation = result.conversation
+      setConversationId(conversation.id)
+      setMessages((conversation.messages || []).map((message) => ({
+        id: message.id || createChatMessageId(),
+        role: message.role,
+        content: message.content,
+        model: message.providerModel || message.model || '',
+      })))
+      if (conversation.lastModel) setModel(conversation.lastModel)
+      if (conversation.pageTitle) setPageTitle(conversation.pageTitle)
+      setPrompt('')
+      setStatus('')
+      setAttachedFileName('')
+      setAttachedFileText('')
+      setIsHistoryOpen(false)
+      setOpenConversationMenuId(null)
+    } catch (error) {
+      setHistoryError(error.response?.data?.message || 'Could not open this conversation. Please try again.')
+    } finally {
+      setIsLoadingHistory(false)
+    }
+  }
+
+  const startRename = (item) => {
+    setRenamingConversationId(item.id)
+    setRenameDraft(item.title || '')
+    setOpenConversationMenuId(null)
+  }
+
+  const saveRename = async (event, item) => {
+    event.preventDefault()
+    const title = renameDraft.trim()
+    if (!title) {
+      setHistoryError('A conversation title cannot be empty.')
+      return
+    }
+    setIsHistoryMutation(true)
+    setHistoryError('')
+    try {
+      const result = await renameConversation(item.id, title)
+      setHistoryItems((items) => items.map((conversation) => (
+        conversation.id === item.id ? { ...conversation, ...result.conversation } : conversation
+      )))
+      setRenamingConversationId(null)
+      setRenameDraft('')
+    } catch (error) {
+      setHistoryError(error.response?.data?.message || 'Could not rename this conversation.')
+    } finally {
+      setIsHistoryMutation(false)
+    }
+  }
+
+  const handleDeleteConversation = async (item) => {
+    const confirmed = typeof globalThis.confirm === 'function'
+      ? globalThis.confirm(`Delete “${item.title}”? This conversation will be permanently removed.`)
+      : true
+    if (!confirmed) return
+
+    setIsHistoryMutation(true)
+    setHistoryError('')
+    setOpenConversationMenuId(null)
+    try {
+      await deleteConversation(item.id)
+      setHistoryItems((items) => items.filter((conversation) => conversation.id !== item.id))
+      if (conversationId === item.id) {
+        setConversationId(null)
+        setMessages([])
+        setPrompt('')
+        setAttachedFileName('')
+        setAttachedFileText('')
+        setStatus('')
+      }
+    } catch (error) {
+      setHistoryError(error.response?.data?.message || 'Could not delete this conversation.')
+    } finally {
+      setIsHistoryMutation(false)
+    }
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    const trimmedPrompt = prompt.trim()
+    if (!trimmedPrompt || isSending) return
+
+    const userMessage = { id: createChatMessageId(), role: 'user', content: trimmedPrompt }
+    const nextMessages = [...messages, userMessage]
+    setMessages(nextMessages)
+    setPrompt('')
+    setIsSending(true)
+    setStatus('')
+
+    try {
+      const pageContext = await readActivePageContext()
+      if (pageContext?.title) setPageTitle(pageContext.title)
+
+      const result = await sendChatMessage({
+        conversationId,
+        model,
+        messages: nextMessages.slice(-16).map(({ role, content }) => ({ role, content })),
+        pageContext,
+        attachment: attachedFileText ? { name: attachedFileName, text: attachedFileText } : undefined,
+        webSearchEnabled,
+      })
+
+      if (result.conversationId) setConversationId(result.conversationId)
+      setMessages((current) => [...current, {
+        id: createChatMessageId(),
+        role: 'assistant',
+        content: result.reply,
+        model: result.providerModel || selectedModel.label,
+      }])
+      if (result.historySaved === false) {
+        setStatus(result.historyWarning || 'Your response was generated but could not be saved to history.')
+      }
+      setAttachedFileName('')
+      setAttachedFileText('')
+    } catch (error) {
+      const message = error.response?.data?.message || (
+        error.code === 'ECONNABORTED'
+          ? 'Lurph took too long to respond. Please try again.'
+          : error.code === 'ERR_NETWORK'
+            ? 'Unable to reach the Lurph server. Check your connection and API deployment.'
+            : error.message || 'Something went wrong while generating the response.'
+      )
+      setStatus(message)
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const handleAttach = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    const extension = file.name.split('.').pop()?.toLowerCase()
+    if (!['txt', 'md', 'csv', 'json'].includes(extension)) {
+      setStatus('For now, Lurph can read TXT, MD, CSV, and JSON attachments.')
+      return
+    }
+    if (file.size > 200 * 1024) {
+      setStatus('Please attach a text file smaller than 200 KB.')
+      return
+    }
+
+    try {
+      const text = (await file.text()).slice(0, MAX_ATTACHMENT_TEXT_CHARS)
+      setAttachedFileName(file.name)
+      setAttachedFileText(text)
+      setStatus('')
+    } catch {
+      setStatus('Could not read this attachment. Please try another text file.')
+    }
+  }
+
+  const groupedHistory = (() => {
+    const sorted = [...historyItems].sort((a, b) => {
+      const difference = new Date(b.lastMessageAt || b.updatedAt).getTime() - new Date(a.lastMessageAt || a.updatedAt).getTime()
+      return historySortNewest ? difference : -difference
+    })
+    const labels = ['Today', 'Yesterday', 'Last 7 days', 'Older']
+    if (!historySortNewest) labels.reverse()
+    const groups = labels.map((label) => ({ label, items: [] }))
+    for (const item of sorted) {
+      const group = getConversationGroup(item.lastMessageAt || item.updatedAt || item.createdAt)
+      groups.find((entry) => entry.label === group)?.items.push(item)
+    }
+    return groups.filter((group) => group.items.length > 0)
+  })()
 
   return (
     <main className="lurph-chat-shell flex h-dvh min-h-[480px] w-full flex-col overflow-hidden bg-[#0a0a0b] text-[#f5f5f7]">
       <header className="flex shrink-0 items-center gap-2 px-4 pb-3 pt-4">
         <div className="relative min-w-0 flex-1">
-          <button
-            type="button"
-            onClick={() => setIsModelMenuOpen((open) => !open)}
-            aria-haspopup="listbox"
-            aria-expanded={isModelMenuOpen}
-            title="Choose AI model"
-            className="flex h-10 w-full min-w-0 max-w-[180px] items-center gap-2 rounded-xl border border-white/[0.12] bg-[#151517] px-3 text-sm transition hover:bg-[#1c1c1f]"
-          >
-            <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#252b50] text-[10px] font-bold text-[#d8ddff]">
-              ✦
-            </span>
-            <span className="min-w-0 flex-1 truncate text-left">
-              {selectedModel.label}
-            </span>
+          <button type="button" onClick={() => setIsModelMenuOpen((open) => !open)} aria-haspopup="listbox" aria-expanded={isModelMenuOpen} title="Choose AI model" className="flex h-10 w-full min-w-0 max-w-[180px] items-center gap-2 rounded-xl border border-white/[0.12] bg-[#151517] px-3 text-sm transition hover:bg-[#1c1c1f]">
+            <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#252b50] text-[10px] font-bold text-[#d8ddff]">✦</span>
+            <span className="min-w-0 flex-1 truncate text-left">{selectedModel.label}</span>
             <ChevronDown size={15} className="shrink-0 text-[#a4a4aa]" />
           </button>
           {isModelMenuOpen && (
-            <div
-              role="listbox"
-              className="absolute left-0 top-12 z-40 w-56 rounded-xl border border-white/[0.12] bg-[#19191c] p-1.5 shadow-2xl"
-            >
+            <div role="listbox" className="absolute left-0 top-12 z-40 w-56 rounded-xl border border-white/[0.12] bg-[#19191c] p-1.5 shadow-2xl">
               {CHAT_MODELS.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  role="option"
-                  aria-selected={model === item.key}
-                  onClick={() => {
-                    setModel(item.key);
-                    setIsModelMenuOpen(false);
-                  }}
-                  className={`flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm transition hover:bg-white/[0.06] ${model === item.key ? "text-[#ffdc00]" : "text-[#dfdfe3]"}`}
-                >
+                <button key={item.key} type="button" role="option" aria-selected={model === item.key} onClick={() => { setModel(item.key); setIsModelMenuOpen(false) }} className={`flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm transition hover:bg-white/[0.06] ${model === item.key ? 'text-[#ffdc00]' : 'text-[#dfdfe3]'}`}>
                   {item.label}
-                  {model === item.key && (
-                    <Check size={15} className="ml-auto" />
-                  )}
+                  {model === item.key && <Check size={15} className="ml-auto" />}
                 </button>
               ))}
             </div>
@@ -750,241 +875,149 @@ function MainChatPanel({ currentUser, onLogout }) {
         </div>
 
         <div className="flex shrink-0 items-center gap-0.5">
-          <button
-            type="button"
-            onClick={openFullPage}
-            title="Open in a tab"
-            aria-label="Open Lurph in a tab"
-            className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
-          >
-            <ExternalLink size={17} />
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              setStatus(
-                "Chat history is not saved yet. Conversation persistence will be added separately.",
-              )
-            }
-            title="History"
-            aria-label="History"
-            className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
-          >
-            <History size={19} />
-          </button>
-          <button
-            type="button"
-            onClick={handleNewChat}
-            title="New chat"
-            aria-label="New chat"
-            className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
-          >
-            <Plus size={21} />
-          </button>
+          <button type="button" onClick={openFullPage} title="Open in a tab" aria-label="Open Lurph in a tab" className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"><ExternalLink size={17} /></button>
+          <button type="button" onClick={() => { setIsHistoryOpen((open) => !open); setHistoryError(''); setOpenConversationMenuId(null); setIsMoreMenuOpen(false) }} title="History" aria-label="History" aria-pressed={isHistoryOpen} className={`grid size-8 shrink-0 place-items-center rounded-lg transition hover:bg-white/[0.07] ${isHistoryOpen ? 'bg-[#ffdc00]/[0.12] text-[#ffdc00]' : 'text-[#a9a9ae] hover:text-white'}`}><History size={19} /></button>
+          <button type="button" onClick={handleNewChat} title="New chat" aria-label="New chat" className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"><Plus size={21} /></button>
           <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsMoreMenuOpen((open) => !open)}
-              title="More options"
-              aria-label="More options"
-              aria-expanded={isMoreMenuOpen}
-              className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
-            >
-              <MoreHorizontal size={20} />
-            </button>
+            <button type="button" onClick={() => setIsMoreMenuOpen((open) => !open)} title="More options" aria-label="More options" aria-expanded={isMoreMenuOpen} className="grid size-8 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"><MoreHorizontal size={20} /></button>
             {isMoreMenuOpen && (
               <div className="absolute right-0 top-9 z-40 w-52 rounded-xl border border-white/[0.12] bg-[#19191c] p-1.5 shadow-2xl">
                 <div className="border-b border-white/[0.08] px-3 py-2">
-                  <p className="truncate text-sm font-semibold">
-                    {currentUser?.name || "Lurph user"}
-                  </p>
-                  <p className="truncate text-xs text-[#96969d]">
-                    {currentUser?.email || ""}
-                  </p>
+                  <p className="truncate text-sm font-semibold">{currentUser?.name || 'Lurph user'}</p>
+                  <p className="truncate text-xs text-[#96969d]">{currentUser?.email || ''}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={openFullPage}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-[#dedee2] hover:bg-white/[0.06]"
-                >
-                  <ExternalLink size={15} /> Open in a tab
-                </button>
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-[#ff9b9b] hover:bg-white/[0.06]"
-                >
-                  <LogOut size={15} /> Sign out
-                </button>
+                <button type="button" onClick={openFullPage} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-[#dedee2] hover:bg-white/[0.06]"><ExternalLink size={15} /> Open in a tab</button>
+                <button type="button" onClick={onLogout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-[#ff9b9b] hover:bg-white/[0.06]"><LogOut size={15} /> Sign out</button>
               </div>
             )}
           </div>
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
-        {messages.length === 0 ? (
-          <div className="flex min-h-full flex-col justify-center py-1">
-            <div className="mx-auto mb-2 grid size-11 place-items-center rounded-full border border-[#ffdc00]/55 bg-[#ffdc00]/[0.07] text-[#ffdc00] shadow-[0_0_40px_rgba(255,220,0,.08)]">
-              <Sparkles size={21} />
+      {isHistoryOpen ? (
+        <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3">
+          <div className="flex shrink-0 items-center gap-2 pb-3">
+            <div className="relative min-w-0 flex-1">
+              <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#85858c]" />
+              <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Search conversations..." aria-label="Search conversations" className="h-10 w-full rounded-xl border border-white/[0.12] bg-[#151517] pl-9 pr-3 text-sm text-[#f2f2f4] outline-none placeholder:text-[#898991] focus:border-[#ffdc00]/50" />
             </div>
-            <h1 className="text-center text-[24px] font-bold leading-8 tracking-tight">
-              Hi there!
-            </h1>
-            <p className="mx-auto mt-0.5 max-w-[260px] text-center text-[12.5px] leading-5 text-[#a9a9b1]">
-              Ask, summarize, write, or research anything on this page.
-            </p>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              {QUICK_ACTIONS.map(
-                ({ icon: Icon, title, detail, prompt: suggestedPrompt }) => (
-                  <button
-                    key={title}
-                    type="button"
-                    onClick={() => handleQuickAction(suggestedPrompt)}
-                    className="group flex min-h-[60px] min-w-0 items-center gap-2 rounded-xl border border-white/[0.12] bg-gradient-to-br from-[#19191b] to-[#111113] p-2.5 text-left transition hover:border-[#ffdc00]/45 hover:bg-[#1b1b1b]"
-                  >
-                    <Icon
-                      size={20}
-                      className="shrink-0 text-[#ffdc00]"
-                      strokeWidth={1.7}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[12px] font-medium leading-4">
-                        {title}
-                      </span>
-                      <span className="block text-[12px] leading-4 text-[#d0d0d4]">
-                        {detail}
-                      </span>
-                    </span>
-                    <ArrowRight
-                      size={13}
-                      className="shrink-0 text-[#d4d4d9] transition group-hover:translate-x-0.5"
-                    />
-                  </button>
-                ),
-              )}
-            </div>
+            <button type="button" onClick={() => setHistorySortNewest((value) => !value)} title={historySortNewest ? 'Sort oldest first' : 'Sort newest first'} aria-label={historySortNewest ? 'Sort oldest first' : 'Sort newest first'} className="grid size-10 shrink-0 place-items-center rounded-xl border border-white/[0.12] bg-[#151517] text-[#b8b8bf] transition hover:border-[#ffdc00]/35 hover:text-[#ffdc00]"><SlidersHorizontal size={18} /></button>
           </div>
-        ) : (
-          <div className="mx-auto flex w-full max-w-[760px] flex-col gap-3 py-3">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={
-                  message.role === "user"
-                    ? "ml-auto max-w-[88%] rounded-2xl rounded-br-sm border border-[#ffdc00]/20 bg-[#ffdc00]/[0.10] px-3.5 py-3 text-[13px] leading-6 text-[#f5f2dc]"
-                    : "mr-auto w-full rounded-xl border border-white/[0.08] bg-[#141416] px-3.5 py-3 text-[13px] leading-6 text-[#e7e7eb]"
-                }
-              >
-                {message.role === "assistant" && (
-                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#ffdc00]">
-                    Lurph
-                  </p>
-                )}
-                <div className="whitespace-pre-wrap break-words">
-                  {message.content}
-                </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+            {isLoadingHistory && historyItems.length === 0 ? (
+              <p className="py-8 text-center text-sm text-[#92929a]">Loading conversations…</p>
+            ) : historyError ? (
+              <p className="rounded-lg border border-[#ffdc00]/20 bg-[#ffdc00]/[0.06] px-3 py-2 text-xs text-[#ded29a]" role="alert">{historyError}</p>
+            ) : groupedHistory.length === 0 ? (
+              <div className="flex h-full min-h-[180px] flex-col items-center justify-center px-5 text-center">
+                <History size={28} className="mb-3 text-[#777780]" />
+                <p className="text-sm font-medium text-[#dedee2]">{historySearch ? 'No matching conversations' : 'No conversations yet'}</p>
+                <p className="mt-1 text-xs leading-5 text-[#85858d]">Your chats will appear here automatically after you send a message.</p>
               </div>
-            ))}
-            {isSending && (
-              <div className="mr-auto flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#141416] px-3.5 py-3 text-xs text-[#aaa9ad]">
-                <span className="size-2 animate-pulse rounded-full bg-[#ffdc00]" />{" "}
-                Lurph is thinking…
+            ) : (
+              <div className="space-y-5 pb-2">
+                {groupedHistory.map((group) => (
+                  <section key={group.label}>
+                    <h2 className="mb-2 px-0.5 text-sm font-semibold text-[#a8a8ae]">{group.label}</h2>
+                    <div className="space-y-1.5">
+                      {group.items.map((item) => (
+                        <article key={item.id} className={`relative rounded-xl border transition ${conversationId === item.id ? 'border-[#ffdc00]/45 bg-[#ffdc00]/[0.07]' : 'border-transparent bg-transparent hover:border-white/[0.08] hover:bg-white/[0.035]'}`}>
+                          {renamingConversationId === item.id ? (
+                            <form onSubmit={(event) => saveRename(event, item)} className="flex items-center gap-2 p-2.5">
+                              <input autoFocus maxLength={120} value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} className="h-9 min-w-0 flex-1 rounded-lg border border-[#ffdc00]/40 bg-[#0e0e10] px-2.5 text-sm text-white outline-none focus:border-[#ffdc00]" aria-label="New conversation title" />
+                              <button type="submit" disabled={isHistoryMutation || !renameDraft.trim()} title="Save title" className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#ffdc00] text-black disabled:opacity-50"><Check size={17} /></button>
+                              <button type="button" onClick={() => { setRenamingConversationId(null); setRenameDraft('') }} title="Cancel rename" className="grid size-9 shrink-0 place-items-center rounded-lg text-[#a5a5ad] hover:bg-white/[0.07]"><X size={17} /></button>
+                            </form>
+                          ) : (
+                            <div className="flex items-center gap-1.5 p-2">
+                              <button type="button" onClick={() => handleLoadConversation(item)} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1 py-1 text-left" title={`Open ${item.title}`}>
+                                <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-white/[0.06] bg-[#171719] text-[#ffdc00]"><FileText size={18} /></span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="flex min-w-0 items-center gap-2">
+                                    <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#f0f0f2]">{item.title}</span>
+                                    <time className="shrink-0 text-[10px] text-[#888890]">{formatConversationDate(item.lastMessageAt || item.updatedAt)}</time>
+                                  </span>
+                                  <span className="mt-0.5 block truncate text-[11px] text-[#98989f]">{item.preview || 'No preview available'}</span>
+                                </span>
+                              </button>
+                              <div className="relative shrink-0">
+                                <button type="button" onClick={() => setOpenConversationMenuId((id) => id === item.id ? null : item.id)} aria-label={`Actions for ${item.title}`} aria-expanded={openConversationMenuId === item.id} title="Conversation actions" className="grid size-8 place-items-center rounded-lg text-[#8d8d95] hover:bg-white/[0.07] hover:text-white"><MoreHorizontal size={18} /></button>
+                                {openConversationMenuId === item.id && (
+                                  <div className="absolute right-0 top-9 z-50 w-36 rounded-xl border border-white/[0.12] bg-[#1a1a1d] p-1.5 shadow-2xl">
+                                    <button type="button" onClick={() => startRename(item)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-[#e6e6e9] hover:bg-white/[0.07]"><Pencil size={14} /> Rename</button>
+                                    <button type="button" onClick={() => handleDeleteConversation(item)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-[#ff8888] hover:bg-white/[0.07]"><Trash2 size={14} /> Delete</button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                ))}
               </div>
             )}
-            <div ref={messagesEndRef} />
+            {isHistoryMutation && <p className="py-2 text-center text-[11px] text-[#888890]">Updating conversation…</p>}
           </div>
-        )}
-        {status && (
-          <p
-            className="mx-auto mt-2 max-w-[760px] rounded-lg border border-[#ffdc00]/20 bg-[#ffdc00]/[0.06] px-2.5 py-2 text-[11px] leading-4 text-[#d9d2a2]"
-            role="status"
-          >
-            {status}
-          </p>
-        )}
-      </div>
+        </section>
+      ) : (
+        <>
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
+            {messages.length === 0 ? (
+              <div className="flex min-h-full flex-col justify-center py-1">
+                <div className="mx-auto mb-2 grid size-11 place-items-center rounded-full border border-[#ffdc00]/55 bg-[#ffdc00]/[0.07] text-[#ffdc00] shadow-[0_0_40px_rgba(255,220,0,.08)]"><Sparkles size={21} /></div>
+                <h1 className="text-center text-[24px] font-bold leading-8 tracking-tight">Hi there!</h1>
+                <p className="mx-auto mt-0.5 max-w-[260px] text-center text-[12.5px] leading-5 text-[#a9a9b1]">Ask, summarize, write, or research anything on this page.</p>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  {QUICK_ACTIONS.map(({ icon: Icon, title, detail, prompt: suggestedPrompt }) => (
+                    <button key={title} type="button" onClick={() => handleQuickAction(suggestedPrompt)} className="group flex min-h-[60px] min-w-0 items-center gap-2 rounded-xl border border-white/[0.12] bg-gradient-to-br from-[#19191b] to-[#111113] p-2.5 text-left transition hover:border-[#ffdc00]/45 hover:bg-[#1b1b1b]">
+                      <Icon size={20} className="shrink-0 text-[#ffdc00]" strokeWidth={1.7} />
+                      <span className="min-w-0 flex-1"><span className="block text-[12px] font-medium leading-4">{title}</span><span className="block text-[12px] leading-4 text-[#d0d0d4]">{detail}</span></span>
+                      <ArrowRight size={13} className="shrink-0 text-[#d4d4d9] transition group-hover:translate-x-0.5" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="mx-auto flex w-full max-w-[760px] flex-col gap-3 py-3">
+                {messages.map((message) => (
+                  <div key={message.id} className={message.role === 'user' ? 'ml-auto max-w-[88%] rounded-2xl rounded-br-sm border border-[#ffdc00]/20 bg-[#ffdc00]/[0.10] px-3.5 py-3 text-[13px] leading-6 text-[#f5f2dc]' : 'mr-auto w-full rounded-xl border border-white/[0.08] bg-[#141416] px-3.5 py-3 text-[13px] leading-6 text-[#e7e7eb]'}>
+                    {message.role === 'assistant' && <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#ffdc00]">Lurph</p>}
+                    <div className="whitespace-pre-wrap break-words">{message.content}</div>
+                  </div>
+                ))}
+                {isSending && <div className="mr-auto flex items-center gap-2 rounded-xl border border-white/[0.08] bg-[#141416] px-3.5 py-3 text-xs text-[#aaa9ad]"><span className="size-2 animate-pulse rounded-full bg-[#ffdc00]" /> Lurph is thinking…</div>}
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+            {status && <p className="mx-auto mt-2 max-w-[760px] rounded-lg border border-[#ffdc00]/20 bg-[#ffdc00]/[0.06] px-2.5 py-2 text-[11px] leading-4 text-[#d9d2a2]" role="status">{status}</p>}
+          </div>
 
-      <div className="shrink-0 px-3 pb-2 pt-1">
-        <div className="mb-1.5 flex min-w-0 items-center gap-2 rounded-lg border border-white/[0.10] bg-[#171719] px-2.5 py-1.5 text-[11px] text-[#b8b8c0]">
-          <PanelRight size={14} className="shrink-0 text-[#b1b1b9]" />
-          <span className="min-w-0 flex-1 truncate">{pageTitle}</span>
-          <ChevronDown size={14} className="shrink-0 text-[#92929a]" />
-        </div>
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-xl border border-[#ffdc00]/80 bg-[#121214] p-2 shadow-[0_8px_28px_rgba(0,0,0,.22)] focus-within:border-[#ffdc00]/80"
-        >
-          <textarea
-            value={prompt}
-            onChange={(event) => {
-              setPrompt(event.target.value);
-              if (status) setStatus("");
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                event.currentTarget.form?.requestSubmit();
-              }
-            }}
-            rows={2}
-            placeholder="Ask Lurph anything about this page..."
-            className="max-h-24 min-h-[40px] w-full resize-none bg-transparent px-1 py-0.5 text-[13px] leading-5 text-[#f4f4f7] outline-none placeholder:text-[#898991]"
-            aria-label="Ask Lurph"
-          />
-          {attachedFileName && (
-            <p className="truncate px-1 pb-1 text-xs text-[#d7d7dc]">
-              Attached: {attachedFileName}
-            </p>
-          )}
-          <div className="flex items-center gap-1.5 pt-1">
-            <input
-              type="file"
-              className="hidden"
-              id="lurph-attachment"
-              accept=".txt,.md,.csv,.json,text/plain,text/markdown,text/csv,application/json"
-              onChange={handleAttach}
-            />
-            <label
-              htmlFor="lurph-attachment"
-              title="Attach a text file"
-              className="grid size-7 cursor-pointer place-items-center rounded-lg text-[#a8a8b0] transition hover:bg-white/[0.06] hover:text-white"
-            >
-              <Paperclip size={16} />
-            </label>
-            <button
-              type="button"
-              onClick={() => setWebSearchEnabled((enabled) => !enabled)}
-              title="Toggle web search"
-              aria-pressed={webSearchEnabled}
-              className={`grid size-7 place-items-center rounded-lg transition hover:bg-white/[0.06] ${webSearchEnabled ? "bg-[#ffdc00]/[0.12] text-[#ffdc00]" : "text-[#a8a8b0] hover:text-white"}`}
-            >
-              <Globe size={16} />
-            </button>
-            <span className="flex-1 truncate text-[11px] text-[#8e8e96]">
-              {isSending
-                ? "Generating response…"
-                : webSearchEnabled
-                  ? "Web search enabled"
-                  : "Ready when you are"}
-            </span>
-            <button
-              type="submit"
-              disabled={!prompt.trim() || isSending}
-              title="Send message"
-              aria-label="Send message"
-              className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#ffdc00] text-[#171600] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <ArrowUp size={18} strokeWidth={2.5} />
-            </button>
+          <div className="shrink-0 px-3 pb-2 pt-1">
+            <div className="mb-1.5 flex min-w-0 items-center gap-2 rounded-lg border border-white/[0.10] bg-[#171719] px-2.5 py-1.5 text-[11px] text-[#b8b8c0]">
+              <PanelRight size={14} className="shrink-0 text-[#b1b1b9]" />
+              <span className="min-w-0 flex-1 truncate">{pageTitle}</span>
+              <ChevronDown size={14} className="shrink-0 text-[#92929a]" />
+            </div>
+            <form onSubmit={handleSubmit} className="rounded-xl border border-[#ffdc00]/80 bg-[#121214] p-2 shadow-[0_8px_28px_rgba(0,0,0,.22)] focus-within:border-[#ffdc00]/80">
+              <textarea value={prompt} onChange={(event) => { setPrompt(event.target.value); if (status) setStatus('') }} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} rows={2} placeholder="Ask Lurph anything about this page..." className="max-h-24 min-h-[40px] w-full resize-none bg-transparent px-1 py-0.5 text-[13px] leading-5 text-[#f4f4f7] outline-none placeholder:text-[#898991]" aria-label="Ask Lurph" />
+              {attachedFileName && <p className="truncate px-1 pb-1 text-xs text-[#d7d7dc]">Attached: {attachedFileName}</p>}
+              <div className="flex items-center gap-1.5 pt-1">
+                <input type="file" className="hidden" id="lurph-attachment" accept=".txt,.md,.csv,.json,text/plain,text/markdown,text/csv,application/json" onChange={handleAttach} />
+                <label htmlFor="lurph-attachment" title="Attach a text file" className="grid size-7 cursor-pointer place-items-center rounded-lg text-[#a8a8b0] transition hover:bg-white/[0.06] hover:text-white"><Paperclip size={16} /></label>
+                <button type="button" onClick={() => setWebSearchEnabled((enabled) => !enabled)} title="Toggle web search" aria-pressed={webSearchEnabled} className={`grid size-7 place-items-center rounded-lg transition hover:bg-white/[0.06] ${webSearchEnabled ? 'bg-[#ffdc00]/[0.12] text-[#ffdc00]' : 'text-[#a8a8b0] hover:text-white'}`}><Globe size={16} /></button>
+                <span className="flex-1 truncate text-[11px] text-[#8e8e96]">{isSending ? 'Generating response…' : webSearchEnabled ? 'Web search enabled' : 'Ready when you are'}</span>
+                <button type="submit" disabled={!prompt.trim() || isSending} title="Send message" aria-label="Send message" className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#ffdc00] text-[#171600] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"><ArrowUp size={18} strokeWidth={2.5} /></button>
+              </div>
+            </form>
+            <p className="mt-1.5 truncate text-center text-[10px] leading-4 text-[#696970]">Lurph can make mistakes. Check important information.</p>
           </div>
-        </form>
-        <p className="mt-1.5 truncate text-center text-[10px] leading-4 text-[#696970]">
-          Lurph can make mistakes. Check important information.
-        </p>
-      </div>
+        </>
+      )}
     </main>
-  );
+  )
 }
 
 function App() {
