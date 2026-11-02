@@ -59,6 +59,7 @@ import {
   PenLine,
   Shield,
 } from "lucide-react";
+import { Youtube } from "lucide-brands";
 
 const features = [
   {
