@@ -59,7 +59,6 @@ import {
   PenLine,
   Shield,
 } from "lucide-react";
-import { Youtube } from "lucide-brands";
 
 const features = [
   {
@@ -1002,19 +1001,16 @@ function SettingsView() {
     {
       name: "Read content",
       detail: "Allows Lurph to read and understand the content on the page.",
-      icon: Eye,
     },
     {
       name: "Create content",
       detail:
         "Allows Lurph to read and create content (e.g., fill forms, write, edit).",
-      icon: PenLine,
     },
     {
       name: "Full access",
       detail:
         "Allows Lurph to read, create, and interact with the site (where supported).",
-      icon: Settings,
     },
   ];
 
@@ -1117,7 +1113,7 @@ function SettingsView() {
               Choose what Lurph can do on each site.
             </p>
             <div className="mt-2.5 space-y-1.5">
-              {permissionOptions.map(({ name, detail, icon: Icon }) => (
+              {permissionOptions.map(({ name, detail }) => (
                 <button
                   key={name}
                   type="button"
@@ -1131,7 +1127,6 @@ function SettingsView() {
                       <span className="size-1.5 rounded-full bg-black" />
                     )}
                   </span>
-                  <Icon size={16} className="mt-0.5 shrink-0 text-[#bdbdc4]" />
                   <span className="min-w-0">
                     <span className="block text-[10px] font-semibold">
                       {name}
