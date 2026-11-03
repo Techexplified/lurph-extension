@@ -8,7 +8,8 @@
     "storage",
     "sidePanel",
     "scripting",
-    "activeTab"
+    "activeTab",
+    "contextMenus"
   ],
   "host_permissions": [
     "http://localhost:4000/*",
@@ -23,7 +24,5 @@
   "side_panel": {
     "default_path": "index.html"
   },
-  "optional_host_permissions": [
-    "<all_urls>"
-  ]
+  "optional_host_permissions": ["<all_urls>"]
 }

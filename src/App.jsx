@@ -59,7 +59,6 @@ import {
   PenLine,
   Shield,
 } from "lucide-react";
-import { Youtube } from "lucide-brands";
 
 const features = [
   {
@@ -80,6 +79,22 @@ const features = [
     description: "Save your chats and settings, and sync across your devices.",
   },
 ];
+
+function YouTubeIcon({ size = 27, className = "" }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      className={className}
+      aria-hidden="true"
+      fill="none"
+    >
+      <rect x="2.2" y="4.5" width="19.6" height="15" rx="4.3" fill="#FF0033" />
+      <path d="M10 8.5L16 12L10 15.5V8.5Z" fill="white" />
+    </svg>
+  );
+}
 
 function GoogleMark() {
   return (
@@ -523,6 +538,8 @@ const QUICK_ACTIONS = [
 
 const MAX_PAGE_TEXT_CHARS = 16000;
 const MAX_ATTACHMENT_TEXT_CHARS = 20000;
+const MAX_SELECTED_TEXT_CHARS = 12000;
+const PENDING_SELECTION_STORAGE_KEY = "lurph_pending_selection";
 
 async function readActivePageContext() {
   const chromeApi = globalThis.chrome;
@@ -619,7 +636,7 @@ function ToolsView({ onUsePrompt }) {
       description: "Upload and chat with any PDF",
     },
     {
-      icon: Youtube,
+      icon: YouTubeIcon,
       title: "YouTube Summary",
       description: "Summarize videos instantly",
     },
@@ -1191,6 +1208,9 @@ function MainChatPanel({ currentUser, onLogout }) {
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [attachedFileName, setAttachedFileName] = useState("");
   const [attachedFileText, setAttachedFileText] = useState("");
+  const [selectedTextContext, setSelectedTextContext] = useState(null);
+  const [clearSelectedTextContext, setClearSelectedTextContext] =
+    useState(false);
   const [messages, setMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const [isSending, setIsSending] = useState(false);
@@ -1207,6 +1227,7 @@ function MainChatPanel({ currentUser, onLogout }) {
   const [renameDraft, setRenameDraft] = useState("");
   const [isHistoryMutation, setIsHistoryMutation] = useState(false);
   const messagesEndRef = useRef(null);
+  const processedSelectionIdRef = useRef(null);
   const selectedModel =
     CHAT_MODELS.find((item) => item.key === model) || CHAT_MODELS[0];
 
@@ -1223,6 +1244,79 @@ function MainChatPanel({ currentUser, onLogout }) {
     return () => {
       active = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const chromeApi = globalThis.chrome;
+    const storage = chromeApi?.storage?.local;
+    if (!storage) return undefined;
+
+    const applySelection = (selection) => {
+      if (
+        !selection ||
+        typeof selection.text !== "string" ||
+        !selection.text.trim()
+      )
+        return;
+      if (selection.expiresAt && Number(selection.expiresAt) < Date.now())
+        return;
+      const selectionId =
+        selection.id ||
+        `${selection.createdAt || ""}:${selection.text.slice(0, 80)}`;
+      if (processedSelectionIdRef.current === selectionId) return;
+      processedSelectionIdRef.current = selectionId;
+
+      const nextContext = {
+        text: selection.text.slice(0, MAX_SELECTED_TEXT_CHARS),
+        title:
+          typeof selection.title === "string"
+            ? selection.title.slice(0, 300)
+            : "",
+        url:
+          typeof selection.url === "string" ? selection.url.slice(0, 2000) : "",
+      };
+
+      // A context-menu selection always starts a fresh chat, never appends to
+      // the conversation that happened to be open in the side panel.
+      setActiveSection("chat");
+      setIsHistoryOpen(false);
+      setConversationId(null);
+      setMessages([]);
+      setPrompt("");
+      setAttachedFileName("");
+      setAttachedFileText("");
+      setSelectedTextContext(nextContext);
+      setClearSelectedTextContext(false);
+      setPageTitle(nextContext.title || "Selected text");
+      setStatus("Selected text attached. Ask Lurph a question about it.");
+      setOpenConversationMenuId(null);
+      setRenamingConversationId(null);
+    };
+
+    const consumePendingSelection = async () => {
+      try {
+        const stored = await storage.get(PENDING_SELECTION_STORAGE_KEY);
+        const pending = stored?.[PENDING_SELECTION_STORAGE_KEY];
+        if (!pending) return;
+        applySelection(pending);
+        await storage.remove(PENDING_SELECTION_STORAGE_KEY);
+      } catch (error) {
+        console.error("Could not load the selected text for Lurph:", error);
+      }
+    };
+
+    const handleStorageChange = (changes, areaName) => {
+      if (areaName !== "local") return;
+      const pending = changes?.[PENDING_SELECTION_STORAGE_KEY]?.newValue;
+      if (!pending) return;
+      applySelection(pending);
+      storage.remove(PENDING_SELECTION_STORAGE_KEY).catch(() => {});
+    };
+
+    chromeApi.storage.onChanged.addListener(handleStorageChange);
+    consumePendingSelection();
+    return () =>
+      chromeApi.storage.onChanged.removeListener(handleStorageChange);
   }, []);
 
   useEffect(() => {
@@ -1279,6 +1373,8 @@ function MainChatPanel({ currentUser, onLogout }) {
     setStatus("");
     setAttachedFileName("");
     setAttachedFileText("");
+    setSelectedTextContext(null);
+    setClearSelectedTextContext(false);
     setIsHistoryOpen(false);
     setOpenConversationMenuId(null);
     setRenamingConversationId(null);
@@ -1301,6 +1397,12 @@ function MainChatPanel({ currentUser, onLogout }) {
       );
       if (conversation.lastModel) setModel(conversation.lastModel);
       if (conversation.pageTitle) setPageTitle(conversation.pageTitle);
+      setSelectedTextContext(
+        conversation.selectedTextContext?.text
+          ? conversation.selectedTextContext
+          : null,
+      );
+      setClearSelectedTextContext(false);
       setPrompt("");
       setStatus("");
       setAttachedFileName("");
@@ -1375,6 +1477,8 @@ function MainChatPanel({ currentUser, onLogout }) {
         setPrompt("");
         setAttachedFileName("");
         setAttachedFileText("");
+        setSelectedTextContext(null);
+        setClearSelectedTextContext(false);
         setStatus("");
       }
     } catch (error) {
@@ -1403,7 +1507,16 @@ function MainChatPanel({ currentUser, onLogout }) {
     setStatus("");
 
     try {
-      const pageContext = await readActivePageContext();
+      const activePageContext = selectedTextContext
+        ? null
+        : await readActivePageContext();
+      const pageContext = selectedTextContext
+        ? {
+            title: selectedTextContext.title || activePageContext?.title || "",
+            url: selectedTextContext.url || activePageContext?.url || "",
+            text: "",
+          }
+        : activePageContext;
       if (pageContext?.title) setPageTitle(pageContext.title);
 
       const result = await sendChatMessage({
@@ -1413,6 +1526,8 @@ function MainChatPanel({ currentUser, onLogout }) {
           .slice(-16)
           .map(({ role, content }) => ({ role, content })),
         pageContext,
+        selectedTextContext: selectedTextContext || undefined,
+        clearSelectedTextContext,
         attachment: attachedFileText
           ? { name: attachedFileName, text: attachedFileText }
           : undefined,
@@ -1420,6 +1535,7 @@ function MainChatPanel({ currentUser, onLogout }) {
       });
 
       if (result.conversationId) setConversationId(result.conversationId);
+      setClearSelectedTextContext(false);
       setMessages((current) => [
         ...current,
         {
@@ -1940,6 +2056,41 @@ function MainChatPanel({ currentUser, onLogout }) {
               <span className="min-w-0 flex-1 truncate">{pageTitle}</span>
               <ChevronDown size={14} className="shrink-0 text-[#92929a]" />
             </div>
+            {selectedTextContext && (
+              <div className="mb-1.5 rounded-xl border border-[#ffdc00]/25 bg-[#ffdc00]/[0.055] px-3 py-2.5">
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#f0d94b]">
+                    Selected text
+                    {selectedTextContext.title
+                      ? ` · ${selectedTextContext.title}`
+                      : ""}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedTextContext(null);
+                      setClearSelectedTextContext(true);
+                      setStatus(
+                        "Selected text removed from this conversation context.",
+                      );
+                    }}
+                    title="Remove selected text"
+                    aria-label="Remove selected text"
+                    className="grid size-6 shrink-0 place-items-center rounded-md text-[#a9a9ae] hover:bg-white/[0.08] hover:text-white"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <p className="line-clamp-3 whitespace-pre-wrap break-words text-[11px] leading-[1.45] text-[#c5c5ca]">
+                  {selectedTextContext.text}
+                </p>
+                {selectedTextContext.url && (
+                  <p className="mt-1 truncate text-[10px] text-[#85858d]">
+                    {selectedTextContext.url}
+                  </p>
+                )}
+              </div>
+            )}
             <form
               onSubmit={handleSubmit}
               className="rounded-xl border border-[#ffdc00]/80 bg-[#121214] p-2 shadow-[0_8px_28px_rgba(0,0,0,.22)] focus-within:border-[#ffdc00]/80"
@@ -1957,7 +2108,11 @@ function MainChatPanel({ currentUser, onLogout }) {
                   }
                 }}
                 rows={2}
-                placeholder="Ask Lurph anything about this page..."
+                placeholder={
+                  selectedTextContext
+                    ? "Ask Lurph about the selected text..."
+                    : "Ask Lurph anything about this page..."
+                }
                 className="max-h-24 min-h-[40px] w-full resize-none bg-transparent px-1 py-0.5 text-[13px] leading-5 text-[#f4f4f7] outline-none placeholder:text-[#898991]"
                 aria-label="Ask Lurph"
               />
