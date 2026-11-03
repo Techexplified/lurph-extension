@@ -9,6 +9,7 @@ import {
 } from "./services/authApi.js";
 import {
   sendChatMessage,
+  extractPdf,
   getConversations,
   getConversation,
   renameConversation,
@@ -628,7 +629,8 @@ function createChatMessageId() {
   );
 }
 
-function ToolsView({ onUsePrompt }) {
+function ToolsView({ onUsePrompt, onSelectPdf, isUploadingPdf, notice }) {
+  const pdfInputRef = useRef(null);
   const tools = [
     {
       icon: FileText,
@@ -661,6 +663,16 @@ function ToolsView({ onUsePrompt }) {
       description: "Write and improve emails with AI",
     },
   ];
+  const toolPrompts = {
+    Rewrite:
+      "Rewrite the text I provide so it is clearer, more polished, and easier to read. Preserve the original meaning, factual details, and intent. Improve structure, flow, grammar, and word choice without adding unsupported information. Match the context and audience. Unless I specify otherwise, use a natural, professional tone. Return the rewritten version first, and include a brief explanation of significant changes only when it would be useful.",
+    Translate:
+      "Translate the text I provide into [target language]. Preserve the original meaning, tone, names, technical terms, formatting, and important nuances. Use natural phrasing that a fluent native speaker would use rather than translating word for word. Do not summarize, simplify, or omit details. If a phrase is ambiguous or a regional language preference matters, ask me to clarify. Return the translation first and keep any notes separate.",
+    "Image Analysis":
+      "Analyze the image I provide. Describe its main subjects, objects, setting, composition, colors, and any visible text. Explain important details and what the image communicates. If it contains a chart, diagram, screenshot, or document, interpret its structure and key information carefully. Distinguish what is directly visible from your interpretation, and do not guess at unclear details. If I have not provided an image, ask me to share one before proceeding.",
+    "Email Draft":
+      "Help me draft or improve a professional email. Use the context, recipient, purpose, key points, and desired tone that I provide. Organize it with a clear subject line, concise opening, well-structured body, and appropriate closing. Keep the message natural and specific, avoid unnecessary jargon, and do not invent facts, commitments, dates, or attachments. If essential details are missing, ask me for them before drafting. Provide a polished, ready-to-send version.",
+  };
   const popular = [
     {
       icon: FileText,
@@ -682,18 +694,50 @@ function ToolsView({ onUsePrompt }) {
     },
   ];
 
+  const handleToolClick = (title) => {
+    if (title === "PDF Q&A") {
+      pdfInputRef.current?.click();
+      return;
+    }
+    // YouTube Summary is intentionally left untouched until its dedicated workflow is built.
+    if (title === "YouTube Summary") return;
+    const suggestedPrompt = toolPrompts[title];
+    if (suggestedPrompt) onUsePrompt(suggestedPrompt);
+  };
+
   return (
     <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-1">
+      <input
+        ref={pdfInputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file) onSelectPdf(file);
+        }}
+      />
       <div className="mb-3 flex items-center justify-between px-1">
         <h1 className="text-lg font-semibold tracking-tight">Tools</h1>
       </div>
+      {notice && (
+        <p
+          role="status"
+          className="mb-2 rounded-lg border border-[#ffdc00]/20 bg-[#ffdc00]/[0.06] px-3 py-2 text-[11px] leading-4 text-[#d9d2a2]"
+        >
+          {notice}
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-2.5">
         {tools.map(({ icon: Icon, title, description }) => (
           <button
             key={title}
             type="button"
             title={title}
-            className="group flex min-h-[132px] min-w-0 flex-col items-start rounded-2xl border border-white/[0.10] bg-gradient-to-br from-[#19191b] to-[#111113] p-3.5 text-left transition hover:border-[#ffdc00]/35 hover:bg-[#1b1b1d]"
+            onClick={() => handleToolClick(title)}
+            disabled={title === "PDF Q&A" && isUploadingPdf}
+            className="group flex min-h-[132px] min-w-0 flex-col items-start rounded-2xl border border-white/[0.10] bg-gradient-to-br from-[#19191b] to-[#111113] p-3.5 text-left transition hover:border-[#ffdc00]/35 hover:bg-[#1b1b1d] disabled:cursor-wait disabled:opacity-65"
           >
             <Icon
               size={27}
@@ -701,14 +745,18 @@ function ToolsView({ onUsePrompt }) {
               className="mb-2.5 text-[#ffdc00]"
             />
             <span className="flex w-full items-center gap-1 text-[13px] font-semibold text-[#f4f4f6]">
-              <span className="min-w-0 flex-1">{title}</span>
+              <span className="min-w-0 flex-1">
+                {title === "PDF Q&A" && isUploadingPdf ? "Reading PDF…" : title}
+              </span>
               <ChevronRight
                 size={17}
                 className="shrink-0 text-[#c7c7cc] transition group-hover:translate-x-0.5"
               />
             </span>
             <span className="mt-1 text-[11px] leading-[1.45] text-[#a4a4ac]">
-              {description}
+              {title === "PDF Q&A" && isUploadingPdf
+                ? "Extracting document text"
+                : description}
             </span>
           </button>
         ))}
@@ -1208,6 +1256,9 @@ function MainChatPanel({ currentUser, onLogout }) {
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [attachedFileName, setAttachedFileName] = useState("");
   const [attachedFileText, setAttachedFileText] = useState("");
+  const [pdfAttachment, setPdfAttachment] = useState(null);
+  const [clearPdfAttachment, setClearPdfAttachment] = useState(false);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
   const [selectedTextContext, setSelectedTextContext] = useState(null);
   const [clearSelectedTextContext, setClearSelectedTextContext] =
     useState(false);
@@ -1285,6 +1336,8 @@ function MainChatPanel({ currentUser, onLogout }) {
       setPrompt("");
       setAttachedFileName("");
       setAttachedFileText("");
+      setPdfAttachment(null);
+      setClearPdfAttachment(false);
       setSelectedTextContext(nextContext);
       setClearSelectedTextContext(false);
       setPageTitle(nextContext.title || "Selected text");
@@ -1373,11 +1426,52 @@ function MainChatPanel({ currentUser, onLogout }) {
     setStatus("");
     setAttachedFileName("");
     setAttachedFileText("");
+    setPdfAttachment(null);
+    setClearPdfAttachment(false);
     setSelectedTextContext(null);
     setClearSelectedTextContext(false);
     setIsHistoryOpen(false);
     setOpenConversationMenuId(null);
     setRenamingConversationId(null);
+  };
+
+  const handlePdfSelect = async (file) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      setStatus("Please choose a PDF file.");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      setStatus("PDF uploads must be 3 MB or smaller.");
+      return;
+    }
+
+    setIsUploadingPdf(true);
+    setStatus("Extracting text from your PDF…");
+    try {
+      const extracted = await extractPdf(file);
+      handleNewChat();
+      setPdfAttachment(extracted);
+      setClearPdfAttachment(false);
+      setPageTitle(extracted.name || file.name);
+      setPrompt(
+        "Please review the uploaded PDF and help me understand it. Start by identifying the document’s topic and purpose, then give me a structured overview of its main sections, key points, important details, and conclusions. Preserve specific names, figures, dates, and terminology. Base your explanation only on the document, and point out anything that is unclear or missing. I will ask follow-up questions about its contents.",
+      );
+      setStatus(
+        extracted.truncated
+          ? `PDF attached (${extracted.pageCount || "unknown"} pages). The extracted text was shortened to fit the context limit.`
+          : `PDF attached successfully (${extracted.pageCount || "unknown"} pages). Ask a question to begin.`,
+      );
+      setActiveSection("chat");
+    } catch (error) {
+      setStatus(
+        error.response?.data?.message ||
+          error.message ||
+          "Could not read this PDF. Please try another file.",
+      );
+    } finally {
+      setIsUploadingPdf(false);
+    }
   };
 
   const handleLoadConversation = async (item) => {
@@ -1397,12 +1491,20 @@ function MainChatPanel({ currentUser, onLogout }) {
       );
       if (conversation.lastModel) setModel(conversation.lastModel);
       if (conversation.pageTitle) setPageTitle(conversation.pageTitle);
+      else if (conversation.pdfAttachment?.name)
+        setPageTitle(conversation.pdfAttachment.name);
       setSelectedTextContext(
         conversation.selectedTextContext?.text
           ? conversation.selectedTextContext
           : null,
       );
       setClearSelectedTextContext(false);
+      setPdfAttachment(
+        conversation.pdfAttachment
+          ? { ...conversation.pdfAttachment, text: "" }
+          : null,
+      );
+      setClearPdfAttachment(false);
       setPrompt("");
       setStatus("");
       setAttachedFileName("");
@@ -1477,6 +1579,8 @@ function MainChatPanel({ currentUser, onLogout }) {
         setPrompt("");
         setAttachedFileName("");
         setAttachedFileText("");
+        setPdfAttachment(null);
+        setClearPdfAttachment(false);
         setSelectedTextContext(null);
         setClearSelectedTextContext(false);
         setStatus("");
@@ -1507,16 +1611,19 @@ function MainChatPanel({ currentUser, onLogout }) {
     setStatus("");
 
     try {
-      const activePageContext = selectedTextContext
-        ? null
-        : await readActivePageContext();
+      const activePageContext =
+        selectedTextContext || pdfAttachment
+          ? null
+          : await readActivePageContext();
       const pageContext = selectedTextContext
         ? {
             title: selectedTextContext.title || activePageContext?.title || "",
             url: selectedTextContext.url || activePageContext?.url || "",
             text: "",
           }
-        : activePageContext;
+        : pdfAttachment
+          ? { title: pdfAttachment.name || "Uploaded PDF", url: "", text: "" }
+          : activePageContext;
       if (pageContext?.title) setPageTitle(pageContext.title);
 
       const result = await sendChatMessage({
@@ -1531,11 +1638,25 @@ function MainChatPanel({ currentUser, onLogout }) {
         attachment: attachedFileText
           ? { name: attachedFileName, text: attachedFileText }
           : undefined,
+        pdfAttachment: pdfAttachment?.text
+          ? {
+              name: pdfAttachment.name,
+              pageCount: pdfAttachment.pageCount,
+              text: pdfAttachment.text,
+            }
+          : undefined,
+        clearPdfAttachment,
         webSearchEnabled,
       });
 
       if (result.conversationId) setConversationId(result.conversationId);
       setClearSelectedTextContext(false);
+      setClearPdfAttachment(false);
+      if (result.historySaved && pdfAttachment?.text) {
+        setPdfAttachment((current) =>
+          current ? { ...current, text: "" } : current,
+        );
+      }
       setMessages((current) => [
         ...current,
         {
@@ -1955,6 +2076,15 @@ function MainChatPanel({ currentUser, onLogout }) {
             openSection("chat");
             handleQuickAction(suggestedPrompt);
           }}
+          onSelectPdf={handlePdfSelect}
+          isUploadingPdf={isUploadingPdf}
+          notice={
+            isUploadingPdf
+              ? "Reading your PDF…"
+              : activeSection === "tools"
+                ? status
+                : ""
+          }
         />
       ) : activeSection === "memory" ? (
         <MemoryView />
@@ -2091,6 +2221,43 @@ function MainChatPanel({ currentUser, onLogout }) {
                 )}
               </div>
             )}
+            {pdfAttachment && (
+              <div className="mb-1.5 rounded-xl border border-[#ffdc00]/25 bg-[#ffdc00]/[0.055] px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <FileText size={16} className="shrink-0 text-[#ffdc00]" />
+                  <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#f0d94b]">
+                    {pdfAttachment.name}
+                  </span>
+                  <span className="shrink-0 text-[10px] text-[#9999a1]">
+                    PDF
+                    {pdfAttachment.pageCount
+                      ? ` · ${pdfAttachment.pageCount} pages`
+                      : ""}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPdfAttachment(null);
+                      setClearPdfAttachment(true);
+                      setStatus(
+                        "PDF removed. Its document context will be cleared from this conversation when you send your next message.",
+                      );
+                    }}
+                    title="Remove PDF"
+                    aria-label="Remove PDF attachment"
+                    className="grid size-6 shrink-0 place-items-center rounded-md text-[#a9a9ae] hover:bg-white/[0.08] hover:text-white"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                {pdfAttachment.truncated && (
+                  <p className="mt-1 text-[10px] text-[#b6a75f]">
+                    Some extracted text was omitted to fit the document context
+                    limit.
+                  </p>
+                )}
+              </div>
+            )}
             <form
               onSubmit={handleSubmit}
               className="rounded-xl border border-[#ffdc00]/80 bg-[#121214] p-2 shadow-[0_8px_28px_rgba(0,0,0,.22)] focus-within:border-[#ffdc00]/80"
@@ -2109,9 +2276,11 @@ function MainChatPanel({ currentUser, onLogout }) {
                 }}
                 rows={2}
                 placeholder={
-                  selectedTextContext
-                    ? "Ask Lurph about the selected text..."
-                    : "Ask Lurph anything about this page..."
+                  pdfAttachment
+                    ? "Ask Lurph a question about this PDF..."
+                    : selectedTextContext
+                      ? "Ask Lurph about the selected text..."
+                      : "Ask Lurph anything about this page..."
                 }
                 className="max-h-24 min-h-[40px] w-full resize-none bg-transparent px-1 py-0.5 text-[13px] leading-5 text-[#f4f4f7] outline-none placeholder:text-[#898991]"
                 aria-label="Ask Lurph"
