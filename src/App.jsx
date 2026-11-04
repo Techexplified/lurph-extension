@@ -540,7 +540,29 @@ const QUICK_ACTIONS = [
 const MAX_PAGE_TEXT_CHARS = 16000;
 const MAX_ATTACHMENT_TEXT_CHARS = 20000;
 const MAX_SELECTED_TEXT_CHARS = 12000;
+const MAX_IMAGE_UPLOAD_BYTES = 2 * 1024 * 1024;
+const IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
+const IMAGE_ANALYSIS_PROMPT =
+  "Analyze the image I provide. Describe its main subjects, objects, setting, composition, colors, and any visible text. Explain important details and what the image communicates. If it contains a chart, diagram, screenshot, or document, interpret its structure and key information carefully. Distinguish what is directly visible from your interpretation, and do not guess at unclear details. If I have not provided an image, ask me to share one before proceeding.";
 const PENDING_SELECTION_STORAGE_KEY = "lurph_pending_selection";
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") resolve(reader.result);
+      else reject(new Error("The selected image could not be read."));
+    };
+    reader.onerror = () =>
+      reject(new Error("The selected image could not be read."));
+    reader.readAsDataURL(file);
+  });
+}
 
 async function readActivePageContext() {
   const chromeApi = globalThis.chrome;
@@ -629,8 +651,16 @@ function createChatMessageId() {
   );
 }
 
-function ToolsView({ onUsePrompt, onSelectPdf, isUploadingPdf, notice }) {
+function ToolsView({
+  onUsePrompt,
+  onSelectPdf,
+  onSelectImage,
+  isUploadingPdf,
+  isUploadingImage,
+  notice,
+}) {
   const pdfInputRef = useRef(null);
+  const imageInputRef = useRef(null);
   const tools = [
     {
       icon: FileText,
@@ -668,8 +698,7 @@ function ToolsView({ onUsePrompt, onSelectPdf, isUploadingPdf, notice }) {
       "Rewrite the text I provide so it is clearer, more polished, and easier to read. Preserve the original meaning, factual details, and intent. Improve structure, flow, grammar, and word choice without adding unsupported information. Match the context and audience. Unless I specify otherwise, use a natural, professional tone. Return the rewritten version first, and include a brief explanation of significant changes only when it would be useful.",
     Translate:
       "Translate the text I provide into [target language]. Preserve the original meaning, tone, names, technical terms, formatting, and important nuances. Use natural phrasing that a fluent native speaker would use rather than translating word for word. Do not summarize, simplify, or omit details. If a phrase is ambiguous or a regional language preference matters, ask me to clarify. Return the translation first and keep any notes separate.",
-    "Image Analysis":
-      "Analyze the image I provide. Describe its main subjects, objects, setting, composition, colors, and any visible text. Explain important details and what the image communicates. If it contains a chart, diagram, screenshot, or document, interpret its structure and key information carefully. Distinguish what is directly visible from your interpretation, and do not guess at unclear details. If I have not provided an image, ask me to share one before proceeding.",
+    "Image Analysis": IMAGE_ANALYSIS_PROMPT,
     "Email Draft":
       "Help me draft or improve a professional email. Use the context, recipient, purpose, key points, and desired tone that I provide. Organize it with a clear subject line, concise opening, well-structured body, and appropriate closing. Keep the message natural and specific, avoid unnecessary jargon, and do not invent facts, commitments, dates, or attachments. If essential details are missing, ask me for them before drafting. Provide a polished, ready-to-send version.",
   };
@@ -699,6 +728,10 @@ function ToolsView({ onUsePrompt, onSelectPdf, isUploadingPdf, notice }) {
       pdfInputRef.current?.click();
       return;
     }
+    if (title === "Image Analysis") {
+      imageInputRef.current?.click();
+      return;
+    }
     // YouTube Summary is intentionally left untouched until its dedicated workflow is built.
     if (title === "YouTube Summary") return;
     const suggestedPrompt = toolPrompts[title];
@@ -716,6 +749,17 @@ function ToolsView({ onUsePrompt, onSelectPdf, isUploadingPdf, notice }) {
           const file = event.target.files?.[0];
           event.target.value = "";
           if (file) onSelectPdf(file);
+        }}
+      />
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file) onSelectImage(file);
         }}
       />
       <div className="mb-3 flex items-center justify-between px-1">
@@ -736,7 +780,10 @@ function ToolsView({ onUsePrompt, onSelectPdf, isUploadingPdf, notice }) {
             type="button"
             title={title}
             onClick={() => handleToolClick(title)}
-            disabled={title === "PDF Q&A" && isUploadingPdf}
+            disabled={
+              (title === "PDF Q&A" && isUploadingPdf) ||
+              (title === "Image Analysis" && isUploadingImage)
+            }
             className="group flex min-h-[132px] min-w-0 flex-col items-start rounded-2xl border border-white/[0.10] bg-gradient-to-br from-[#19191b] to-[#111113] p-3.5 text-left transition hover:border-[#ffdc00]/35 hover:bg-[#1b1b1d] disabled:cursor-wait disabled:opacity-65"
           >
             <Icon
@@ -746,7 +793,11 @@ function ToolsView({ onUsePrompt, onSelectPdf, isUploadingPdf, notice }) {
             />
             <span className="flex w-full items-center gap-1 text-[13px] font-semibold text-[#f4f4f6]">
               <span className="min-w-0 flex-1">
-                {title === "PDF Q&A" && isUploadingPdf ? "Reading PDF…" : title}
+                {title === "PDF Q&A" && isUploadingPdf
+                  ? "Reading PDF…"
+                  : title === "Image Analysis" && isUploadingImage
+                    ? "Loading image…"
+                    : title}
               </span>
               <ChevronRight
                 size={17}
@@ -756,7 +807,9 @@ function ToolsView({ onUsePrompt, onSelectPdf, isUploadingPdf, notice }) {
             <span className="mt-1 text-[11px] leading-[1.45] text-[#a4a4ac]">
               {title === "PDF Q&A" && isUploadingPdf
                 ? "Extracting document text"
-                : description}
+                : title === "Image Analysis" && isUploadingImage
+                  ? "Preparing image"
+                  : description}
             </span>
           </button>
         ))}
@@ -1256,6 +1309,8 @@ function MainChatPanel({ currentUser, onLogout }) {
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [attachedFileName, setAttachedFileName] = useState("");
   const [attachedFileText, setAttachedFileText] = useState("");
+  const [imageAttachment, setImageAttachment] = useState(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [pdfAttachment, setPdfAttachment] = useState(null);
   const [clearPdfAttachment, setClearPdfAttachment] = useState(false);
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
@@ -1336,6 +1391,7 @@ function MainChatPanel({ currentUser, onLogout }) {
       setPrompt("");
       setAttachedFileName("");
       setAttachedFileText("");
+      setImageAttachment(null);
       setPdfAttachment(null);
       setClearPdfAttachment(false);
       setSelectedTextContext(nextContext);
@@ -1426,6 +1482,7 @@ function MainChatPanel({ currentUser, onLogout }) {
     setStatus("");
     setAttachedFileName("");
     setAttachedFileText("");
+    setImageAttachment(null);
     setPdfAttachment(null);
     setClearPdfAttachment(false);
     setSelectedTextContext(null);
@@ -1433,6 +1490,62 @@ function MainChatPanel({ currentUser, onLogout }) {
     setIsHistoryOpen(false);
     setOpenConversationMenuId(null);
     setRenamingConversationId(null);
+  };
+
+  const handleImageSelect = async (file, startNewChat = false) => {
+    if (!file) return;
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    const extensionMime =
+      {
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        jfif: "image/jpeg",
+        pjpeg: "image/jpeg",
+        png: "image/png",
+        webp: "image/webp",
+        gif: "image/gif",
+      }[extension] || "";
+    const browserMime = (file.type || "").toLowerCase().split(";")[0];
+    // Some Windows file associations report an empty or non-standard MIME type.
+    // Prefer a recognized browser MIME type, then fall back to the file extension.
+    const inferredMime = IMAGE_MIME_TYPES.has(browserMime)
+      ? browserMime
+      : extensionMime;
+    if (!IMAGE_MIME_TYPES.has(inferredMime)) {
+      setStatus("Please choose a JPEG, PNG, WebP, or GIF image.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+      setStatus(
+        "Images must be 2 MB or smaller. Please choose a smaller image.",
+      );
+      return;
+    }
+
+    setIsUploadingImage(true);
+    setStatus("Preparing your image…");
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      if (!dataUrl.startsWith(`data:${inferredMime};base64,`)) {
+        throw new Error(
+          "The selected image could not be read in a supported format.",
+        );
+      }
+      if (startNewChat) handleNewChat();
+      setImageAttachment({ name: file.name, mimeType: inferredMime, dataUrl });
+      setPrompt(IMAGE_ANALYSIS_PROMPT);
+      setPageTitle(file.name);
+      setActiveSection("chat");
+      setStatus(
+        "Image attached. Ask a question or send the suggested prompt to analyze it.",
+      );
+    } catch (error) {
+      setStatus(
+        error.message || "Could not read this image. Please try another file.",
+      );
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   const handlePdfSelect = async (file) => {
@@ -1509,6 +1622,7 @@ function MainChatPanel({ currentUser, onLogout }) {
       setStatus("");
       setAttachedFileName("");
       setAttachedFileText("");
+      setImageAttachment(null);
       setIsHistoryOpen(false);
       setOpenConversationMenuId(null);
     } catch (error) {
@@ -1579,6 +1693,7 @@ function MainChatPanel({ currentUser, onLogout }) {
         setPrompt("");
         setAttachedFileName("");
         setAttachedFileText("");
+        setImageAttachment(null);
         setPdfAttachment(null);
         setClearPdfAttachment(false);
         setSelectedTextContext(null);
@@ -1612,7 +1727,7 @@ function MainChatPanel({ currentUser, onLogout }) {
 
     try {
       const activePageContext =
-        selectedTextContext || pdfAttachment
+        selectedTextContext || pdfAttachment || imageAttachment
           ? null
           : await readActivePageContext();
       const pageContext = selectedTextContext
@@ -1623,7 +1738,13 @@ function MainChatPanel({ currentUser, onLogout }) {
           }
         : pdfAttachment
           ? { title: pdfAttachment.name || "Uploaded PDF", url: "", text: "" }
-          : activePageContext;
+          : imageAttachment
+            ? {
+                title: imageAttachment.name || "Uploaded image",
+                url: "",
+                text: "",
+              }
+            : activePageContext;
       if (pageContext?.title) setPageTitle(pageContext.title);
 
       const result = await sendChatMessage({
@@ -1646,6 +1767,13 @@ function MainChatPanel({ currentUser, onLogout }) {
             }
           : undefined,
         clearPdfAttachment,
+        imageAttachment: imageAttachment
+          ? {
+              name: imageAttachment.name,
+              mimeType: imageAttachment.mimeType,
+              dataUrl: imageAttachment.dataUrl,
+            }
+          : undefined,
         webSearchEnabled,
       });
 
@@ -1671,6 +1799,10 @@ function MainChatPanel({ currentUser, onLogout }) {
           result.historyWarning ||
             "Your response was generated but could not be saved to history.",
         );
+      } else if (result.imageAttachmentStored === false) {
+        setStatus(
+          "Image analyzed. It remains available for follow-up questions in this open chat, but the image file is not saved to chat history. Re-upload it if you reopen this conversation.",
+        );
       }
       setAttachedFileName("");
       setAttachedFileText("");
@@ -1695,8 +1827,19 @@ function MainChatPanel({ currentUser, onLogout }) {
     if (!file) return;
 
     const extension = file.name.split(".").pop()?.toLowerCase();
+    const isImage =
+      file.type.toLowerCase().startsWith("image/") ||
+      ["jpg", "jpeg", "jfif", "pjpeg", "png", "webp", "gif"].includes(
+        extension,
+      );
+    if (isImage) {
+      await handleImageSelect(file);
+      return;
+    }
     if (!["txt", "md", "csv", "json"].includes(extension)) {
-      setStatus("For now, Lurph can read TXT, MD, CSV, and JSON attachments.");
+      setStatus(
+        "Attach an image (JPEG, PNG, WebP, or GIF) or a TXT, MD, CSV, or JSON file.",
+      );
       return;
     }
     if (file.size > 200 * 1024) {
@@ -2077,13 +2220,17 @@ function MainChatPanel({ currentUser, onLogout }) {
             handleQuickAction(suggestedPrompt);
           }}
           onSelectPdf={handlePdfSelect}
+          onSelectImage={(file) => handleImageSelect(file, true)}
           isUploadingPdf={isUploadingPdf}
+          isUploadingImage={isUploadingImage}
           notice={
             isUploadingPdf
               ? "Reading your PDF…"
-              : activeSection === "tools"
-                ? status
-                : ""
+              : isUploadingImage
+                ? "Preparing image…"
+                : activeSection === "tools"
+                  ? status
+                  : ""
           }
         />
       ) : activeSection === "memory" ? (
@@ -2221,6 +2368,38 @@ function MainChatPanel({ currentUser, onLogout }) {
                 )}
               </div>
             )}
+            {imageAttachment && (
+              <div className="mb-1.5 flex items-center gap-2 rounded-xl border border-[#ffdc00]/25 bg-[#ffdc00]/[0.055] px-3 py-2.5">
+                <img
+                  src={imageAttachment.dataUrl}
+                  alt={imageAttachment.name}
+                  className="size-11 shrink-0 rounded-lg border border-white/[0.10] object-cover"
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[11px] font-semibold text-[#f0d94b]">
+                    {imageAttachment.name}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-[#9999a1]">
+                    Image attached · available for follow-up questions in this
+                    chat
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImageAttachment(null);
+                    setStatus(
+                      "Image removed. It will no longer be included with your next message.",
+                    );
+                  }}
+                  title="Remove image"
+                  aria-label="Remove image attachment"
+                  className="grid size-6 shrink-0 place-items-center rounded-md text-[#a9a9ae] hover:bg-white/[0.08] hover:text-white"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
             {pdfAttachment && (
               <div className="mb-1.5 rounded-xl border border-[#ffdc00]/25 bg-[#ffdc00]/[0.055] px-3 py-2.5">
                 <div className="flex items-center gap-2">
@@ -2278,9 +2457,11 @@ function MainChatPanel({ currentUser, onLogout }) {
                 placeholder={
                   pdfAttachment
                     ? "Ask Lurph a question about this PDF..."
-                    : selectedTextContext
-                      ? "Ask Lurph about the selected text..."
-                      : "Ask Lurph anything about this page..."
+                    : imageAttachment
+                      ? "Ask Lurph a question about this image..."
+                      : selectedTextContext
+                        ? "Ask Lurph about the selected text..."
+                        : "Ask Lurph anything about this page..."
                 }
                 className="max-h-24 min-h-[40px] w-full resize-none bg-transparent px-1 py-0.5 text-[13px] leading-5 text-[#f4f4f7] outline-none placeholder:text-[#898991]"
                 aria-label="Ask Lurph"
@@ -2295,12 +2476,12 @@ function MainChatPanel({ currentUser, onLogout }) {
                   type="file"
                   className="hidden"
                   id="lurph-attachment"
-                  accept=".txt,.md,.csv,.json,text/plain,text/markdown,text/csv,application/json"
+                  accept=".txt,.md,.csv,.json,image/*,text/plain,text/markdown,text/csv,application/json"
                   onChange={handleAttach}
                 />
                 <label
                   htmlFor="lurph-attachment"
-                  title="Attach a text file"
+                  title="Attach an image or text file"
                   className="grid size-7 cursor-pointer place-items-center rounded-lg text-[#a8a8b0] transition hover:bg-white/[0.06] hover:text-white"
                 >
                   <Paperclip size={16} />
