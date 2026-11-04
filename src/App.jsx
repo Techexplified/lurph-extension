@@ -29,6 +29,7 @@ import {
   Puzzle,
   Pin,
   ArrowRight,
+  ArrowLeft,
   ChevronDown,
   Wrench,
   Database,
@@ -735,7 +736,7 @@ function ToolsView({
     // YouTube Summary is intentionally left untouched until its dedicated workflow is built.
     if (title === "YouTube Summary") return;
     const suggestedPrompt = toolPrompts[title];
-    if (suggestedPrompt) onUsePrompt(suggestedPrompt);
+    if (suggestedPrompt) onUsePrompt(suggestedPrompt, title);
   };
 
   return (
@@ -828,7 +829,7 @@ function ToolsView({
           <button
             key={title}
             type="button"
-            onClick={() => onUsePrompt(prompt)}
+            onClick={() => onUsePrompt(prompt, title)}
             className="group flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-2.5 text-left transition hover:border-[#ffdc00]/30 hover:bg-white/[0.045]"
           >
             <Icon
@@ -1305,6 +1306,7 @@ function MainChatPanel({ currentUser, onLogout }) {
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
+  const [activePromptTool, setActivePromptTool] = useState("");
   const [pageTitle, setPageTitle] = useState("Current tab");
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [attachedFileName, setAttachedFileName] = useState("");
@@ -1333,6 +1335,7 @@ function MainChatPanel({ currentUser, onLogout }) {
   const [renameDraft, setRenameDraft] = useState("");
   const [isHistoryMutation, setIsHistoryMutation] = useState(false);
   const messagesEndRef = useRef(null);
+  const promptTextareaRef = useRef(null);
   const processedSelectionIdRef = useRef(null);
   const selectedModel =
     CHAT_MODELS.find((item) => item.key === model) || CHAT_MODELS[0];
@@ -1389,6 +1392,7 @@ function MainChatPanel({ currentUser, onLogout }) {
       setConversationId(null);
       setMessages([]);
       setPrompt("");
+      setActivePromptTool("");
       setAttachedFileName("");
       setAttachedFileText("");
       setImageAttachment(null);
@@ -1436,6 +1440,21 @@ function MainChatPanel({ currentUser, onLogout }) {
   }, [messages, isSending]);
 
   useEffect(() => {
+    const textarea = promptTextareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+    const maxHeight = Math.max(
+      140,
+      Math.min(Math.round(window.innerHeight * 0.42), 320),
+    );
+    const nextHeight = Math.min(textarea.scrollHeight, maxHeight);
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY =
+      textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [prompt]);
+
+  useEffect(() => {
     if (!isHistoryOpen) return undefined;
     let active = true;
     setIsLoadingHistory(true);
@@ -1469,8 +1488,9 @@ function MainChatPanel({ currentUser, onLogout }) {
     setIsMoreMenuOpen(false);
   };
 
-  const handleQuickAction = (suggestedPrompt) => {
+  const handleQuickAction = (suggestedPrompt, toolName = "") => {
     setPrompt(suggestedPrompt);
+    setActivePromptTool(toolName || "");
     setStatus("");
   };
 
@@ -1479,6 +1499,7 @@ function MainChatPanel({ currentUser, onLogout }) {
     setConversationId(null);
     setMessages([]);
     setPrompt("");
+    setActivePromptTool("");
     setStatus("");
     setAttachedFileName("");
     setAttachedFileText("");
@@ -1533,6 +1554,7 @@ function MainChatPanel({ currentUser, onLogout }) {
       }
       if (startNewChat) handleNewChat();
       setImageAttachment({ name: file.name, mimeType: inferredMime, dataUrl });
+      setActivePromptTool("Image Analysis");
       setPrompt(IMAGE_ANALYSIS_PROMPT);
       setPageTitle(file.name);
       setActiveSection("chat");
@@ -1565,6 +1587,7 @@ function MainChatPanel({ currentUser, onLogout }) {
       const extracted = await extractPdf(file);
       handleNewChat();
       setPdfAttachment(extracted);
+      setActivePromptTool("PDF Q&A");
       setClearPdfAttachment(false);
       setPageTitle(extracted.name || file.name);
       setPrompt(
@@ -1617,6 +1640,7 @@ function MainChatPanel({ currentUser, onLogout }) {
           ? { ...conversation.pdfAttachment, text: "" }
           : null,
       );
+      setActivePromptTool(conversation.pdfAttachment?.name ? "PDF Q&A" : "");
       setClearPdfAttachment(false);
       setPrompt("");
       setStatus("");
@@ -2026,6 +2050,20 @@ function MainChatPanel({ currentUser, onLogout }) {
         </div>
       </header>
 
+      {activeSection === "chat" && activePromptTool && (
+        <div className="shrink-0 px-4 pb-2">
+          <button
+            type="button"
+            onClick={() => openSection("tools")}
+            title="Back to Tools"
+            className="flex h-8 max-w-full items-center gap-2 rounded-md px-1 text-left text-sm text-[#d7d7dc] transition hover:text-white"
+          >
+            <ArrowLeft size={17} className="shrink-0 text-[#b8b8c0]" />
+            <span className="truncate font-medium">{activePromptTool}</span>
+          </button>
+        </div>
+      )}
+
       {isHistoryOpen ? (
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3">
           <div className="flex shrink-0 items-center gap-2 pb-3">
@@ -2215,9 +2253,9 @@ function MainChatPanel({ currentUser, onLogout }) {
         </section>
       ) : activeSection === "tools" ? (
         <ToolsView
-          onUsePrompt={(suggestedPrompt) => {
+          onUsePrompt={(suggestedPrompt, toolName) => {
             openSection("chat");
-            handleQuickAction(suggestedPrompt);
+            handleQuickAction(suggestedPrompt, toolName);
           }}
           onSelectPdf={handlePdfSelect}
           onSelectImage={(file) => handleImageSelect(file, true)}
@@ -2240,7 +2278,9 @@ function MainChatPanel({ currentUser, onLogout }) {
       ) : (
         <>
           <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
-            {messages.length === 0 ? (
+            {messages.length === 0 && activePromptTool ? (
+              <div className="min-h-full" aria-hidden="true" />
+            ) : messages.length === 0 ? (
               <div className="flex min-h-full flex-col justify-center py-1">
                 <div className="mx-auto mb-2 grid size-11 place-items-center rounded-full border border-[#ffdc00]/55 bg-[#ffdc00]/[0.07] text-[#ffdc00] shadow-[0_0_40px_rgba(255,220,0,.08)]">
                   <Sparkles size={21} />
@@ -2442,6 +2482,7 @@ function MainChatPanel({ currentUser, onLogout }) {
               className="rounded-xl border border-[#ffdc00]/80 bg-[#121214] p-2 shadow-[0_8px_28px_rgba(0,0,0,.22)] focus-within:border-[#ffdc00]/80"
             >
               <textarea
+                ref={promptTextareaRef}
                 value={prompt}
                 onChange={(event) => {
                   setPrompt(event.target.value);
@@ -2453,7 +2494,7 @@ function MainChatPanel({ currentUser, onLogout }) {
                     event.currentTarget.form?.requestSubmit();
                   }
                 }}
-                rows={2}
+                rows={1}
                 placeholder={
                   pdfAttachment
                     ? "Ask Lurph a question about this PDF..."
@@ -2463,7 +2504,7 @@ function MainChatPanel({ currentUser, onLogout }) {
                         ? "Ask Lurph about the selected text..."
                         : "Ask Lurph anything about this page..."
                 }
-                className="max-h-24 min-h-[40px] w-full resize-none bg-transparent px-1 py-0.5 text-[13px] leading-5 text-[#f4f4f7] outline-none placeholder:text-[#898991]"
+                className="min-h-[40px] w-full resize-none overflow-y-hidden bg-transparent px-1 py-0.5 text-[13px] leading-5 text-[#f4f4f7] outline-none placeholder:text-[#898991]"
                 aria-label="Ask Lurph"
               />
               {attachedFileName && (
