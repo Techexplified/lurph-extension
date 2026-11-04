@@ -516,7 +516,8 @@ const QUICK_ACTIONS = [
     icon: FileText,
     title: "Summarize",
     detail: "this page",
-    prompt: "Summarize this page in clear, concise bullet points.",
+    prompt:
+      "Summarize the full readable content of the current webpage in clear, well-organized bullet points. Cover the page's main topic, key sections, important facts, arguments, examples, figures, and conclusions. Preserve essential details and distinguish the page's claims from established facts. Avoid repeating navigation text or boilerplate where possible. If the captured page content is incomplete, state that limitation rather than implying the entire page was reviewed.",
   },
   {
     icon: Lightbulb,
@@ -539,6 +540,9 @@ const QUICK_ACTIONS = [
 ];
 
 const MAX_PAGE_TEXT_CHARS = 16000;
+// Dedicated page summaries can use a larger capture window than ordinary prompts.
+// 60k characters is a practical request-size/context compromise for OpenRouter.
+const MAX_SUMMARIZE_PAGE_TEXT_CHARS = 60000;
 const MAX_ATTACHMENT_TEXT_CHARS = 20000;
 const MAX_SELECTED_TEXT_CHARS = 12000;
 const MAX_IMAGE_UPLOAD_BYTES = 2 * 1024 * 1024;
@@ -565,7 +569,7 @@ function readFileAsDataUrl(file) {
   });
 }
 
-async function readActivePageContext() {
+async function readActivePageContext({ maxChars = MAX_PAGE_TEXT_CHARS } = {}) {
   const chromeApi = globalThis.chrome;
   if (!chromeApi?.tabs?.query) return null;
 
@@ -580,33 +584,48 @@ async function readActivePageContext() {
       title: tab.title || "Current tab",
       url: tab.url || "",
       text: "",
+      truncated: false,
     };
 
     if (!chromeApi.scripting?.executeScript) return fallback;
 
     const [injection] = await chromeApi.scripting.executeScript({
       target: { tabId: tab.id },
-      func: (maxChars) => ({
-        title: document.title || "Current tab",
-        url: window.location.href,
-        text: (document.body?.innerText || "").slice(0, maxChars),
-      }),
-      args: [MAX_PAGE_TEXT_CHARS],
+      func: (limit) => {
+        // innerText captures the readable, rendered text throughout the page,
+        // including content below the current scroll position.
+        const fullText = (
+          document.body?.innerText ||
+          document.documentElement?.innerText ||
+          ""
+        )
+          .replace(/\n{3,}/g, "\n\n")
+          .trim();
+        return {
+          title: document.title || "Current tab",
+          url: window.location.href,
+          text: fullText.slice(0, limit),
+          truncated: fullText.length > limit,
+          capturedCharacters: Math.min(fullText.length, limit),
+          totalCharacters: fullText.length,
+        };
+      },
+      args: [maxChars],
     });
 
     return injection?.result
       ? {
           title: String(injection.result.title || fallback.title).slice(0, 300),
           url: String(injection.result.url || fallback.url).slice(0, 2000),
-          text: String(injection.result.text || "").slice(
-            0,
-            MAX_PAGE_TEXT_CHARS,
-          ),
+          text: String(injection.result.text || "").slice(0, maxChars),
+          truncated: injection.result.truncated === true,
+          capturedCharacters: Number(injection.result.capturedCharacters) || 0,
+          totalCharacters: Number(injection.result.totalCharacters) || 0,
         }
       : fallback;
   } catch {
     // Restricted pages (chrome://, Chrome Web Store, PDF viewers, etc.) cannot
-    // be injected into. Continue with the user's prompt without page text.
+    // be injected into. The dedicated page-summary flow will show a clear error.
     return null;
   }
 }
@@ -1744,16 +1763,19 @@ function MainChatPanel({ currentUser, onLogout }) {
       content: trimmedPrompt,
     };
     const nextMessages = [...messages, userMessage];
-    setMessages(nextMessages);
-    setPrompt("");
+    const isFullPageSummary = activePromptTool === "Summarize this page";
     setIsSending(true);
-    setStatus("");
+    setStatus(isFullPageSummary ? "Reading the current webpage…" : "");
 
     try {
       const activePageContext =
         selectedTextContext || pdfAttachment || imageAttachment
           ? null
-          : await readActivePageContext();
+          : await readActivePageContext({
+              maxChars: isFullPageSummary
+                ? MAX_SUMMARIZE_PAGE_TEXT_CHARS
+                : MAX_PAGE_TEXT_CHARS,
+            });
       const pageContext = selectedTextContext
         ? {
             title: selectedTextContext.title || activePageContext?.title || "",
@@ -1769,7 +1791,18 @@ function MainChatPanel({ currentUser, onLogout }) {
                 text: "",
               }
             : activePageContext;
+
+      if (isFullPageSummary && !pageContext?.text?.trim()) {
+        setStatus(
+          "Lurph could not read this webpage. Open a regular website, grant Lurph access to the site if prompted, and try again. Chrome internal pages and some protected pages cannot be read.",
+        );
+        return;
+      }
+
       if (pageContext?.title) setPageTitle(pageContext.title);
+      setMessages(nextMessages);
+      setPrompt("");
+      setStatus("");
 
       const result = await sendChatMessage({
         conversationId,
@@ -1827,6 +1860,10 @@ function MainChatPanel({ currentUser, onLogout }) {
         setStatus(
           "Image analyzed. It remains available for follow-up questions in this open chat, but the image file is not saved to chat history. Re-upload it if you reopen this conversation.",
         );
+      } else if (isFullPageSummary && pageContext?.truncated) {
+        setStatus(
+          `This page contains more text than Lurph can send in one request. The summary covers the first ${MAX_SUMMARIZE_PAGE_TEXT_CHARS.toLocaleString()} characters of readable page content.`,
+        );
       }
       setAttachedFileName("");
       setAttachedFileText("");
@@ -1839,6 +1876,7 @@ function MainChatPanel({ currentUser, onLogout }) {
             ? "Unable to reach the Lurph server. Check your connection and API deployment."
             : error.message ||
               "Something went wrong while generating the response.");
+      setPrompt((current) => current || trimmedPrompt);
       setStatus(message);
     } finally {
       setIsSending(false);
@@ -2302,7 +2340,12 @@ function MainChatPanel({ currentUser, onLogout }) {
                       <button
                         key={title}
                         type="button"
-                        onClick={() => handleQuickAction(suggestedPrompt)}
+                        onClick={() =>
+                          handleQuickAction(
+                            suggestedPrompt,
+                            title === "Summarize" ? "Summarize this page" : "",
+                          )
+                        }
                         className="group flex min-h-[60px] min-w-0 items-center gap-2 rounded-xl border border-white/[0.12] bg-gradient-to-br from-[#19191b] to-[#111113] p-2.5 text-left transition hover:border-[#ffdc00]/45 hover:bg-[#1b1b1b]"
                       >
                         <Icon
