@@ -50,6 +50,7 @@ import {
   Trash2,
   X,
   Languages,
+  ArrowLeftRight,
   Image as ImageIcon,
   Mail,
   ChevronRight,
@@ -530,6 +531,42 @@ const IMAGE_MIME_TYPES = new Set([
   "image/webp",
   "image/gif",
 ]);
+const TRANSLATION_LANGUAGES = [
+  "Auto-detect",
+  "Arabic",
+  "Bengali",
+  "Chinese (Simplified)",
+  "Chinese (Traditional)",
+  "Dutch",
+  "English",
+  "French",
+  "German",
+  "Greek",
+  "Gujarati",
+  "Hindi",
+  "Indonesian",
+  "Italian",
+  "Japanese",
+  "Kannada",
+  "Korean",
+  "Malay",
+  "Marathi",
+  "Persian",
+  "Polish",
+  "Portuguese",
+  "Punjabi",
+  "Russian",
+  "Spanish",
+  "Swahili",
+  "Tamil",
+  "Telugu",
+  "Thai",
+  "Turkish",
+  "Ukrainian",
+  "Urdu",
+  "Vietnamese",
+];
+
 const IMAGE_ANALYSIS_PROMPT = "Analyze this image and explain its contents.";
 const PENDING_SELECTION_STORAGE_KEY = "lurph_pending_selection";
 
@@ -687,7 +724,6 @@ function ToolsView({
   ];
   const toolPrompts = {
     Rewrite: "Rewrite this text clearly and professionally.",
-    Translate: "Translate this text into [target language].",
     "Image Analysis": IMAGE_ANALYSIS_PROMPT,
     "Email Draft": "Draft a professional email using my notes.",
   };
@@ -698,6 +734,10 @@ function ToolsView({
     }
     if (title === "Image Analysis") {
       imageInputRef.current?.click();
+      return;
+    }
+    if (title === "Translate") {
+      onUsePrompt("", title);
       return;
     }
     const suggestedPrompt = toolPrompts[title];
@@ -894,6 +934,9 @@ function MainChatPanel({ currentUser, onLogout }) {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [activePromptTool, setActivePromptTool] = useState("");
+  const [translateFromLanguage, setTranslateFromLanguage] =
+    useState("Auto-detect");
+  const [translateToLanguage, setTranslateToLanguage] = useState("English");
   const [pageTitle, setPageTitle] = useState("Current tab");
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [attachedFileName, setAttachedFileName] = useState("");
@@ -1076,7 +1119,7 @@ function MainChatPanel({ currentUser, onLogout }) {
   };
 
   const handleQuickAction = (suggestedPrompt, toolName = "") => {
-    setPrompt(suggestedPrompt);
+    setPrompt(toolName === "Translate" ? "" : suggestedPrompt);
     setActivePromptTool(toolName || "");
     setStatus("");
   };
@@ -1202,14 +1245,16 @@ function MainChatPanel({ currentUser, onLogout }) {
       const result = await getConversation(item.id);
       const conversation = result.conversation;
       setConversationId(conversation.id);
-      setMessages(
-        (conversation.messages || []).map((message) => ({
-          id: message.id || createChatMessageId(),
-          role: message.role,
-          content: message.content,
-          model: message.providerModel || message.model || "",
-        })),
-      );
+      const loadedMessages = (conversation.messages || []).map((message) => ({
+        id: message.id || createChatMessageId(),
+        role: message.role,
+        content: message.content,
+        model: message.providerModel || message.model || "",
+        tool: message.tool || "",
+        translationFrom: message.translationFrom || "",
+        translationTo: message.translationTo || "",
+      }));
+      setMessages(loadedMessages);
       if (conversation.lastModel) setModel(conversation.lastModel);
       if (conversation.pageTitle) setPageTitle(conversation.pageTitle);
       else if (conversation.pdfAttachment?.name)
@@ -1225,7 +1270,24 @@ function MainChatPanel({ currentUser, onLogout }) {
           ? { ...conversation.pdfAttachment, text: "" }
           : null,
       );
-      setActivePromptTool(conversation.pdfAttachment?.name ? "PDF Q&A" : "");
+      const lastTranslationMessage = [...loadedMessages]
+        .reverse()
+        .find((message) => message.tool === "translate");
+      setActivePromptTool(
+        conversation.pdfAttachment?.name
+          ? "PDF Q&A"
+          : lastTranslationMessage
+            ? "Translate"
+            : "",
+      );
+      if (lastTranslationMessage) {
+        setTranslateFromLanguage(
+          lastTranslationMessage.translationFrom || "Auto-detect",
+        );
+        setTranslateToLanguage(
+          lastTranslationMessage.translationTo || "English",
+        );
+      }
       setClearPdfAttachment(false);
       setPrompt("");
       setStatus("");
@@ -1323,10 +1385,26 @@ function MainChatPanel({ currentUser, onLogout }) {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt || isSending) return;
 
+    const submittedTool =
+      activePromptTool === "Translate"
+        ? "translate"
+        : activePromptTool === "Email Draft"
+          ? "email-draft"
+          : "";
+    const translation =
+      activePromptTool === "Translate"
+        ? {
+            fromLanguage: translateFromLanguage,
+            toLanguage: translateToLanguage,
+          }
+        : undefined;
     const userMessage = {
       id: createChatMessageId(),
       role: "user",
       content: trimmedPrompt,
+      tool: submittedTool,
+      translationFrom: translation?.fromLanguage || "",
+      translationTo: translation?.toLanguage || "",
     };
     const nextMessages = [...messages, userMessage];
     const isFullPageSummary = activePromptTool === "Summarize this page";
@@ -1335,7 +1413,10 @@ function MainChatPanel({ currentUser, onLogout }) {
 
     try {
       const activePageContext =
-        selectedTextContext || pdfAttachment || imageAttachment
+        activePromptTool === "Translate" ||
+        selectedTextContext ||
+        pdfAttachment ||
+        imageAttachment
           ? null
           : await readActivePageContext({
               maxChars: isFullPageSummary
@@ -1397,6 +1478,8 @@ function MainChatPanel({ currentUser, onLogout }) {
               dataUrl: imageAttachment.dataUrl,
             }
           : undefined,
+        tool: submittedTool,
+        translation,
         webSearchEnabled,
       });
 
@@ -1415,6 +1498,9 @@ function MainChatPanel({ currentUser, onLogout }) {
           role: "assistant",
           content: result.reply,
           model: result.providerModel || selectedModel.label,
+          tool: result.tool || submittedTool,
+          translationFrom: translation?.fromLanguage || "",
+          translationTo: translation?.toLanguage || "",
         },
       ]);
       if (result.historySaved === false) {
@@ -1655,6 +1741,89 @@ function MainChatPanel({ currentUser, onLogout }) {
           </button>
         </div>
       )}
+
+      {activeSection === "chat" &&
+        !isHistoryOpen &&
+        activePromptTool === "Translate" && (
+          <div className="shrink-0 px-3 pb-2">
+            <div className="rounded-xl border border-white/[0.10] bg-gradient-to-br from-[#171b22] to-[#111318] p-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_34px_minmax(0,1fr)] items-end gap-2">
+                <label className="min-w-0">
+                  <span className="mb-1.5 block text-[11px] font-medium text-[#c8cbd2]">
+                    From
+                  </span>
+                  <span className="relative block">
+                    <select
+                      value={translateFromLanguage}
+                      onChange={(event) =>
+                        setTranslateFromLanguage(event.target.value)
+                      }
+                      aria-label="Translate from language"
+                      className="h-10 w-full appearance-none rounded-lg border border-white/[0.10] bg-[#1b222c] px-3 pr-8 text-xs text-[#f0f1f4] outline-none transition focus:border-[#ffdc00]/60"
+                    >
+                      {TRANSLATION_LANGUAGES.map((language) => (
+                        <option key={language} value={language}>
+                          {language}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={15}
+                      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#a9afb9]"
+                    />
+                  </span>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (translateFromLanguage === "Auto-detect") return;
+                    setTranslateFromLanguage(translateToLanguage);
+                    setTranslateToLanguage(translateFromLanguage);
+                  }}
+                  disabled={translateFromLanguage === "Auto-detect"}
+                  title={
+                    translateFromLanguage === "Auto-detect"
+                      ? "Choose a source language to swap"
+                      : "Swap languages"
+                  }
+                  aria-label="Swap translation languages"
+                  className="mb-1 grid size-[34px] place-items-center rounded-lg text-[#b9c0cb] transition hover:bg-white/[0.07] hover:text-[#ffdc00] disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <ArrowLeftRight size={18} />
+                </button>
+
+                <label className="min-w-0">
+                  <span className="mb-1.5 block text-[11px] font-medium text-[#c8cbd2]">
+                    To
+                  </span>
+                  <span className="relative block">
+                    <select
+                      value={translateToLanguage}
+                      onChange={(event) =>
+                        setTranslateToLanguage(event.target.value)
+                      }
+                      aria-label="Translate to language"
+                      className="h-10 w-full appearance-none rounded-lg border border-white/[0.10] bg-[#1b222c] px-3 pr-8 text-xs text-[#f0f1f4] outline-none transition focus:border-[#ffdc00]/60"
+                    >
+                      {TRANSLATION_LANGUAGES.filter(
+                        (language) => language !== "Auto-detect",
+                      ).map((language) => (
+                        <option key={language} value={language}>
+                          {language}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={15}
+                      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#a9afb9]"
+                    />
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
 
       {isHistoryOpen ? (
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3">
@@ -2091,13 +2260,15 @@ function MainChatPanel({ currentUser, onLogout }) {
                 }}
                 rows={1}
                 placeholder={
-                  pdfAttachment
-                    ? "Ask Lurph a question about this PDF..."
-                    : imageAttachment
-                      ? "Ask Lurph a question about this image..."
-                      : selectedTextContext
-                        ? "Ask Lurph about the selected text..."
-                        : "Ask Lurph anything about this page..."
+                  activePromptTool === "Translate"
+                    ? "Type or paste text to translate..."
+                    : pdfAttachment
+                      ? "Ask Lurph a question about this PDF..."
+                      : imageAttachment
+                        ? "Ask Lurph a question about this image..."
+                        : selectedTextContext
+                          ? "Ask Lurph about the selected text..."
+                          : "Ask Lurph anything about this page..."
                 }
                 className="min-h-[40px] w-full resize-none overflow-y-hidden bg-transparent px-1 py-0.5 text-[13px] leading-5 text-[#f4f4f7] outline-none placeholder:text-[#898991]"
                 aria-label="Ask Lurph"
