@@ -82,22 +82,6 @@ const features = [
   },
 ];
 
-function YouTubeIcon({ size = 27, className = "" }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      className={className}
-      aria-hidden="true"
-      fill="none"
-    >
-      <rect x="2.2" y="4.5" width="19.6" height="15" rx="4.3" fill="#FF0033" />
-      <path d="M10 8.5L16 12L10 15.5V8.5Z" fill="white" />
-    </svg>
-  );
-}
-
 function GoogleMark() {
   return (
     <svg
@@ -686,11 +670,6 @@ function ToolsView({
       description: "Upload and chat with any PDF",
     },
     {
-      icon: YouTubeIcon,
-      title: "YouTube Summary",
-      description: "Summarize videos instantly",
-    },
-    {
       icon: PenLine,
       title: "Rewrite",
       description: "Improve, rephrase or change tone",
@@ -726,8 +705,6 @@ function ToolsView({
       imageInputRef.current?.click();
       return;
     }
-    // YouTube Summary is intentionally left untouched until its dedicated workflow is built.
-    if (title === "YouTube Summary") return;
     const suggestedPrompt = toolPrompts[title];
     if (suggestedPrompt) onUsePrompt(suggestedPrompt, title);
   };
