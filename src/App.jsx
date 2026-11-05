@@ -978,62 +978,6 @@ function MemoryView() {
 function SettingsView() {
   const [extensionAccess, setExtensionAccess] = useState(true);
   const [permissionLevel, setPermissionLevel] = useState("Read content");
-  const [storeMemories, setStoreMemories] = useState(true);
-  const [improveResponses, setImproveResponses] = useState(false);
-  const [siteQuery, setSiteQuery] = useState("");
-  const [sitePermissions, setSitePermissions] = useState([
-    {
-      domain: "notion.so",
-      level: "Full access",
-      enabled: true,
-      mark: "N",
-      color: "bg-white text-black",
-    },
-    {
-      domain: "youtube.com",
-      level: "Read content",
-      enabled: true,
-      mark: "▶",
-      color: "bg-red-600 text-white",
-    },
-    {
-      domain: "docs.google.com",
-      level: "Full access",
-      enabled: true,
-      mark: "▤",
-      color: "bg-blue-600 text-white",
-    },
-    {
-      domain: "mail.google.com",
-      level: "Read content",
-      enabled: false,
-      mark: "M",
-      color: "bg-white text-red-500",
-    },
-    {
-      domain: "linkedin.com",
-      level: "Read content",
-      enabled: false,
-      mark: "in",
-      color: "bg-blue-700 text-white",
-    },
-    {
-      domain: "chat.openai.com",
-      level: "Read content",
-      enabled: true,
-      mark: "◎",
-      color: "bg-[#252525] text-white",
-    },
-  ]);
-  const toggleSite = (domain) =>
-    setSitePermissions((items) =>
-      items.map((item) =>
-        item.domain === domain ? { ...item, enabled: !item.enabled } : item,
-      ),
-    );
-  const filteredSites = sitePermissions.filter((item) =>
-    item.domain.includes(siteQuery.toLowerCase()),
-  );
 
   const Toggle = ({ checked, onChange, label }) => (
     <button
@@ -1074,159 +1018,60 @@ function SettingsView() {
           Settings &amp; Permissions
         </h1>
         <p className="mt-1 text-[11px] leading-[1.5] text-[#a4a4ac]">
-          Control what Lurph can access, how it works on each site, and your
-          data preferences.
+          Control what Lurph can access and how it works on websites you visit.
         </p>
       </div>
-      <div className="grid grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] gap-2.5">
-        <div className="space-y-2.5">
-          <div className="overflow-hidden rounded-xl border border-white/[0.10] bg-gradient-to-br from-[#19191b] to-[#111113]">
-            <div className="flex items-center gap-3 p-3">
-              <Globe size={23} className="shrink-0 text-[#d9d9de]" />
-              <div className="min-w-0 flex-1">
-                <h2 className="text-xs font-semibold">Extension Access</h2>
-                <p className="mt-1 text-[10px] leading-4 text-[#9d9da5]">
-                  Allow Lurph to work on websites you visit.
-                </p>
-              </div>
-            </div>
-            <div className="flex justify-end border-t border-white/[0.07] px-3 py-2.5">
-              <Toggle
-                checked={extensionAccess}
-                onChange={() => setExtensionAccess((value) => !value)}
-                label="Extension access"
-              />
+
+      <div className="space-y-2.5">
+        <div className="overflow-hidden rounded-xl border border-white/[0.10] bg-gradient-to-br from-[#19191b] to-[#111113]">
+          <div className="flex items-center gap-3 p-3">
+            <Globe size={23} className="shrink-0 text-[#d9d9de]" />
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xs font-semibold">Extension Access</h2>
+              <p className="mt-1 text-[10px] leading-4 text-[#9d9da5]">
+                Allow Lurph to work on websites you visit.
+              </p>
             </div>
           </div>
-          <div className="rounded-xl border border-white/[0.10] bg-gradient-to-br from-[#19191b] to-[#111113] p-3">
-            <h2 className="text-xs font-semibold">Site Permissions</h2>
-            <p className="mt-1 text-[10px] text-[#9d9da5]">
-              Manage permissions for each website.
-            </p>
-            <div className="relative mt-2.5">
-              <Search
-                size={14}
-                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[#888890]"
-              />
-              <input
-                value={siteQuery}
-                onChange={(event) => setSiteQuery(event.target.value)}
-                placeholder="Search sites..."
-                className="h-9 w-full rounded-lg border border-white/[0.08] bg-[#101012] pl-8 pr-2 text-[11px] text-white outline-none placeholder:text-[#85858d] focus:border-[#ffdc00]/40"
-              />
-            </div>
-            <div className="mt-2 space-y-1">
-              {filteredSites.map((site) => (
-                <div
-                  key={site.domain}
-                  className="flex items-center gap-2 rounded-lg border border-white/[0.07] bg-[#111113] px-2 py-2"
-                >
-                  <span
-                    className={`grid size-7 shrink-0 place-items-center rounded-md text-[11px] font-bold ${site.color}`}
-                  >
-                    {site.mark}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[10px] font-medium">
-                      {site.domain}
-                    </p>
-                    <p className="truncate text-[9px] text-[#9999a1]">
-                      {site.level}
-                    </p>
-                  </div>
-                  <Toggle
-                    checked={site.enabled}
-                    onChange={() => toggleSite(site.domain)}
-                    label={`Access for ${site.domain}`}
-                  />
-                  <button
-                    type="button"
-                    aria-label={`More options for ${site.domain}`}
-                    title="More options"
-                    className="grid size-5 shrink-0 place-items-center text-[#96969e]"
-                  >
-                    <MoreVertical size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              className="mt-2.5 flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-white/[0.10] bg-[#151517] text-[11px] text-[#d6d6db] hover:border-[#ffdc00]/35"
-            >
-              <Plus size={15} /> Add another site
-            </button>
+          <div className="flex justify-end border-t border-white/[0.07] px-3 py-2.5">
+            <Toggle
+              checked={extensionAccess}
+              onChange={() => setExtensionAccess((value) => !value)}
+              label="Extension access"
+            />
           </div>
         </div>
 
-        <div className="space-y-2.5">
-          <div className="rounded-xl border border-white/[0.10] bg-gradient-to-br from-[#19191b] to-[#111113] p-3">
-            <h2 className="text-xs font-semibold">Permission Levels</h2>
-            <p className="mt-1 text-[10px] text-[#9d9da5]">
-              Choose what Lurph can do on each site.
-            </p>
-            <div className="mt-2.5 space-y-1.5">
-              {permissionOptions.map(({ name, detail }) => (
-                <button
-                  key={name}
-                  type="button"
-                  onClick={() => setPermissionLevel(name)}
-                  className={`flex w-full items-start gap-2 rounded-lg border p-2.5 text-left transition ${permissionLevel === name ? "border-[#ffdc00]/80 bg-[#ffdc00]/[0.055]" : "border-white/[0.08] bg-[#111113] hover:border-white/[0.16]"}`}
+        <div className="rounded-xl border border-white/[0.10] bg-gradient-to-br from-[#19191b] to-[#111113] p-3">
+          <h2 className="text-xs font-semibold">Permission Levels</h2>
+          <p className="mt-1 text-[10px] text-[#9d9da5]">
+            Choose what Lurph can do on each site.
+          </p>
+          <div className="mt-2.5 space-y-1.5">
+            {permissionOptions.map(({ name, detail }) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => setPermissionLevel(name)}
+                className={`flex w-full items-start gap-2 rounded-lg border p-2.5 text-left transition ${permissionLevel === name ? "border-[#ffdc00]/80 bg-[#ffdc00]/[0.055]" : "border-white/[0.08] bg-[#111113] hover:border-white/[0.16]"}`}
+              >
+                <span
+                  className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border ${permissionLevel === name ? "border-[#ffdc00] bg-[#ffdc00]" : "border-[#77777e]"}`}
                 >
-                  <span
-                    className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border ${permissionLevel === name ? "border-[#ffdc00] bg-[#ffdc00]" : "border-[#77777e]"}`}
-                  >
-                    {permissionLevel === name && (
-                      <span className="size-1.5 rounded-full bg-black" />
-                    )}
+                  {permissionLevel === name && (
+                    <span className="size-1.5 rounded-full bg-black" />
+                  )}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[10px] font-semibold">
+                    {name}
                   </span>
-                  <span className="min-w-0">
-                    <span className="block text-[10px] font-semibold">
-                      {name}
-                    </span>
-                    <span className="mt-1 block text-[9px] leading-[1.45] text-[#9b9ba3]">
-                      {detail}
-                    </span>
+                  <span className="mt-1 block text-[9px] leading-[1.45] text-[#9b9ba3]">
+                    {detail}
                   </span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="overflow-hidden rounded-xl border border-white/[0.10] bg-gradient-to-br from-[#19191b] to-[#111113]">
-            <div className="flex items-center gap-2 border-b border-white/[0.07] px-3 py-3">
-              <Shield size={19} className="text-[#dedee2]" />
-              <h2 className="text-xs font-semibold">Data &amp; Privacy</h2>
-            </div>
-            <div className="flex items-center justify-between gap-2 px-3 py-3">
-              <span className="text-[10px]">Store memories from sites</span>
-              <Toggle
-                checked={storeMemories}
-                onChange={() => setStoreMemories((value) => !value)}
-                label="Store memories from sites"
-              />
-            </div>
-            <div className="flex items-center justify-between gap-2 border-t border-white/[0.07] px-3 py-3">
-              <span className="text-[10px]">Use data to improve responses</span>
-              <Toggle
-                checked={improveResponses}
-                onChange={() => setImproveResponses((value) => !value)}
-                label="Use data to improve responses"
-              />
-            </div>
-            <button
-              type="button"
-              className="flex w-full items-center justify-between border-t border-white/[0.07] px-3 py-3 text-left text-[10px] hover:bg-white/[0.025]"
-            >
-              Clear all site data{" "}
-              <ChevronRight size={15} className="text-[#a0a0a7]" />
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center justify-between border-t border-white/[0.07] px-3 py-3 text-left text-[10px] hover:bg-white/[0.025]"
-            >
-              Export my data{" "}
-              <ChevronRight size={15} className="text-[#a0a0a7]" />
-            </button>
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
