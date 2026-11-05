@@ -516,26 +516,25 @@ const QUICK_ACTIONS = [
     icon: FileText,
     title: "Summarize",
     detail: "this page",
-    prompt:
-      "Summarize the full readable content of the current webpage in clear, well-organized bullet points. Cover the page's main topic, key sections, important facts, arguments, examples, figures, and conclusions. Preserve essential details and distinguish the page's claims from established facts. Avoid repeating navigation text or boilerplate where possible. If the captured page content is incomplete, state that limitation rather than implying the entire page was reviewed.",
+    prompt: "Summarize this webpage in concise bullet points.",
   },
   {
     icon: Lightbulb,
     title: "Explain",
     detail: "this content",
-    prompt: "Explain the main ideas on this page in simple terms.",
+    prompt: "Explain this webpage in simple, clear language.",
   },
   {
     icon: Scale,
     title: "Compare",
     detail: "with sources",
-    prompt: "Compare the main claims on this page with reliable sources.",
+    prompt: "Compare this page with reliable external sources.",
   },
   {
     icon: ListChecks,
     title: "Find key",
     detail: "takeaways",
-    prompt: "Identify the key takeaways from this page.",
+    prompt: "Extract the key takeaways from this page.",
   },
 ];
 
@@ -552,8 +551,7 @@ const IMAGE_MIME_TYPES = new Set([
   "image/webp",
   "image/gif",
 ]);
-const IMAGE_ANALYSIS_PROMPT =
-  "Analyze the image I provide. Describe its main subjects, objects, setting, composition, colors, and any visible text. Explain important details and what the image communicates. If it contains a chart, diagram, screenshot, or document, interpret its structure and key information carefully. Distinguish what is directly visible from your interpretation, and do not guess at unclear details. If I have not provided an image, ask me to share one before proceeding.";
+const IMAGE_ANALYSIS_PROMPT = "Analyze this image and explain its contents.";
 const PENDING_SELECTION_STORAGE_KEY = "lurph_pending_selection";
 
 function readFileAsDataUrl(file) {
@@ -714,35 +712,11 @@ function ToolsView({
     },
   ];
   const toolPrompts = {
-    Rewrite:
-      "Rewrite the text I provide so it is clearer, more polished, and easier to read. Preserve the original meaning, factual details, and intent. Improve structure, flow, grammar, and word choice without adding unsupported information. Match the context and audience. Unless I specify otherwise, use a natural, professional tone. Return the rewritten version first, and include a brief explanation of significant changes only when it would be useful.",
-    Translate:
-      "Translate the text I provide into [target language]. Preserve the original meaning, tone, names, technical terms, formatting, and important nuances. Use natural phrasing that a fluent native speaker would use rather than translating word for word. Do not summarize, simplify, or omit details. If a phrase is ambiguous or a regional language preference matters, ask me to clarify. Return the translation first and keep any notes separate.",
+    Rewrite: "Rewrite this text clearly and professionally.",
+    Translate: "Translate this text into [target language].",
     "Image Analysis": IMAGE_ANALYSIS_PROMPT,
-    "Email Draft":
-      "Help me draft or improve a professional email. Use the context, recipient, purpose, key points, and desired tone that I provide. Organize it with a clear subject line, concise opening, well-structured body, and appropriate closing. Keep the message natural and specific, avoid unnecessary jargon, and do not invent facts, commitments, dates, or attachments. If essential details are missing, ask me for them before drafting. Provide a polished, ready-to-send version.",
+    "Email Draft": "Draft a professional email using my notes.",
   };
-  const popular = [
-    {
-      icon: FileText,
-      title: "Summarize this page",
-      description: "Get key points from the current page",
-      prompt: "Summarize this page in clear, concise bullet points.",
-    },
-    {
-      icon: Lightbulb,
-      title: "Explain this",
-      description: "Simplify and explain the selected content",
-      prompt: "Explain the main ideas on this page in simple terms.",
-    },
-    {
-      icon: ListChecks,
-      title: "Find action items",
-      description: "Extract tasks and next steps",
-      prompt: "Identify the action items and next steps from this page.",
-    },
-  ];
-
   const handleToolClick = (title) => {
     if (title === "PDF Q&A") {
       pdfInputRef.current?.click();
@@ -831,43 +805,6 @@ function ToolsView({
                   ? "Preparing image"
                   : description}
             </span>
-          </button>
-        ))}
-      </div>
-      <div className="mb-2 mt-5 flex items-center justify-between px-1">
-        <h2 className="text-base font-semibold">Popular</h2>
-        <button
-          type="button"
-          className="text-xs font-medium text-[#ffdc00] hover:text-[#ffe96a]"
-        >
-          View all
-        </button>
-      </div>
-      <div className="space-y-1.5">
-        {popular.map(({ icon: Icon, title, description, prompt }) => (
-          <button
-            key={title}
-            type="button"
-            onClick={() => onUsePrompt(prompt, title)}
-            className="group flex w-full items-center gap-3 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-2.5 text-left transition hover:border-[#ffdc00]/30 hover:bg-white/[0.045]"
-          >
-            <Icon
-              size={21}
-              className="shrink-0 text-[#ffdc00]"
-              strokeWidth={1.8}
-            />
-            <span className="min-w-0 flex-1">
-              <span className="block text-[12px] font-semibold text-[#ededf0]">
-                {title}
-              </span>
-              <span className="mt-0.5 block text-[11px] leading-4 text-[#9999a1]">
-                {description}
-              </span>
-            </span>
-            <ChevronRight
-              size={16}
-              className="shrink-0 text-[#a7a7af] transition group-hover:translate-x-0.5"
-            />
           </button>
         ))}
       </div>
@@ -1609,9 +1546,7 @@ function MainChatPanel({ currentUser, onLogout }) {
       setActivePromptTool("PDF Q&A");
       setClearPdfAttachment(false);
       setPageTitle(extracted.name || file.name);
-      setPrompt(
-        "Please review the uploaded PDF and help me understand it. Start by identifying the document’s topic and purpose, then give me a structured overview of its main sections, key points, important details, and conclusions. Preserve specific names, figures, dates, and terminology. Base your explanation only on the document, and point out anything that is unclear or missing. I will ask follow-up questions about its contents.",
-      );
+      setPrompt("Summarize this PDF and answer my questions.");
       setStatus(
         extracted.truncated
           ? `PDF attached (${extracted.pageCount || "unknown"} pages). The extracted text was shortened to fit the context limit.`
