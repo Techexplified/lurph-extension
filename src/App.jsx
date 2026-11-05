@@ -32,7 +32,6 @@ import {
   ArrowLeft,
   ChevronDown,
   Wrench,
-  Database,
   Settings,
   FileText,
   Lightbulb,
@@ -47,16 +46,12 @@ import {
   PanelRight,
   LogOut,
   Search,
-  SlidersHorizontal,
   Pencil,
   Trash2,
   X,
   Languages,
   Image as ImageIcon,
   Mail,
-  Code2,
-  BookOpen,
-  MoreVertical,
   ChevronRight,
   PenLine,
   Shield,
@@ -785,192 +780,6 @@ function ToolsView({
           </button>
         ))}
       </div>
-    </section>
-  );
-}
-
-function MemoryView() {
-  const [category, setCategory] = useState("All");
-  const [search, setSearch] = useState("");
-  const [memoryEnabled, setMemoryEnabled] = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
-  const memories = [
-    {
-      category: "Preference",
-      text: "Prefers concise, structured summaries of Notion articles.",
-      age: "2 days ago",
-      icon: FileText,
-    },
-    {
-      category: "Key Fact",
-      text: "Interested in content about AI agents and productivity tools.",
-      age: "1 week ago",
-      icon: FileText,
-    },
-    {
-      category: "Preference",
-      text: "Likes explanations with practical examples and real-world use cases.",
-      age: "2 weeks ago",
-      icon: SlidersHorizontal,
-    },
-    {
-      category: "Context",
-      text: "Often compares Notion with other productivity tools.",
-      age: "2 weeks ago",
-      icon: Code2,
-    },
-    {
-      category: "Key Fact",
-      text: "Reading articles related to AI, product management, and workflow automation.",
-      age: "3 weeks ago",
-      icon: BookOpen,
-    },
-  ];
-  const categories = [
-    { label: "All", count: 12 },
-    { label: "Preferences", count: 4 },
-    { label: "Context", count: 3 },
-    { label: "Key Facts", count: 3 },
-  ];
-  const filteredMemories = memories.filter(
-    (item) =>
-      (category === "All" || item.category === category.replace(/s$/, "")) &&
-      `${item.category} ${item.text}`
-        .toLowerCase()
-        .includes(search.toLowerCase()),
-  );
-
-  return (
-    <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3 pt-1">
-      <div className="rounded-xl border border-white/[0.10] bg-gradient-to-br from-[#19191b] to-[#111113] p-3">
-        <div className="flex items-start gap-3">
-          <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-[#f1f1f1] text-xl font-bold text-[#171717]">
-            N
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 text-sm font-semibold">
-              notion.so <ChevronDown size={14} className="text-[#9999a0]" />
-            </div>
-            <p className="mt-0.5 text-[11px] text-[#9a9aa2]">
-              12 memories · Last updated 2 days ago
-            </p>
-            <p className="mt-2 text-[11px] leading-[1.5] text-[#b5b5bc]">
-              Lurph remembers key information from this site to give you more
-              relevant and personalized answers.
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={memoryEnabled}
-            aria-label="Enable memories for this site"
-            onClick={() => setMemoryEnabled((value) => !value)}
-            className={`relative mt-0.5 h-5 w-10 shrink-0 rounded-full transition ${memoryEnabled ? "bg-[#ffdc00]" : "bg-[#55555b]"}`}
-          >
-            <span
-              className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${memoryEnabled ? "left-[22px]" : "left-0.5"}`}
-            />
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center gap-1 overflow-x-auto pb-1 [scrollbar-width:none]">
-        {categories.map((item) => (
-          <button
-            key={item.label}
-            type="button"
-            onClick={() => setCategory(item.label)}
-            className={`shrink-0 rounded-lg border px-2.5 py-2 text-[10px] font-medium transition ${category === item.label ? "border-[#ffdc00]/70 bg-[#ffdc00]/[0.08] text-[#ffdc00]" : "border-white/[0.10] bg-[#171719] text-[#c2c2c8] hover:border-white/[0.2]"}`}
-          >
-            {item.label} ({item.count})
-          </button>
-        ))}
-        <button
-          type="button"
-          title="More memory filters"
-          className="grid size-8 shrink-0 place-items-center rounded-lg border border-white/[0.10] bg-[#171719] text-[#b5b5bc]"
-        >
-          <MoreVertical size={16} />
-        </button>
-      </div>
-
-      <div className="mt-2 flex items-center gap-2">
-        <div className="relative min-w-0 flex-1">
-          <Search
-            size={16}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8e8e96]"
-          />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search memories for this site..."
-            aria-label="Search memories"
-            className="h-10 w-full rounded-xl border border-white/[0.12] bg-[#151517] pl-9 pr-3 text-xs text-white outline-none placeholder:text-[#898991] focus:border-[#ffdc00]/45"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowFilters((value) => !value)}
-          aria-pressed={showFilters}
-          title="Filter memories"
-          className={`grid size-10 shrink-0 place-items-center rounded-xl border bg-[#151517] transition ${showFilters ? "border-[#ffdc00]/50 text-[#ffdc00]" : "border-white/[0.12] text-[#b8b8bf]"}`}
-        >
-          <SlidersHorizontal size={17} />
-        </button>
-      </div>
-      {showFilters && (
-        <div className="mt-2 rounded-lg border border-white/[0.10] bg-[#141416] px-3 py-2 text-[11px] text-[#a9a9b1]">
-          Showing memories saved from the current website.
-        </div>
-      )}
-
-      <div className="mt-2.5 space-y-1.5 pb-1">
-        {filteredMemories.map(
-          ({ category: itemCategory, text, age, icon: Icon }) => (
-            <article
-              key={text}
-              className="flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.10] bg-gradient-to-br from-[#19191b] to-[#111113] px-3 py-2.5"
-            >
-              <Icon
-                size={21}
-                className="shrink-0 text-[#d3d3d8]"
-                strokeWidth={1.8}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="rounded-full bg-white/[0.10] px-2 py-0.5 text-[9px] text-[#c5c5ca]">
-                    {itemCategory}
-                  </span>
-                  <span className="ml-auto text-[9px] text-[#8c8c94]">
-                    {age}
-                  </span>
-                </div>
-                <p className="text-[11px] leading-[1.45] text-[#dedee2]">
-                  {text}
-                </p>
-              </div>
-              <button
-                type="button"
-                title="Memory actions"
-                className="grid size-6 shrink-0 place-items-center rounded-md text-[#909098] hover:bg-white/[0.07] hover:text-white"
-              >
-                <MoreVertical size={16} />
-              </button>
-            </article>
-          ),
-        )}
-        {filteredMemories.length === 0 && (
-          <p className="py-8 text-center text-xs text-[#92929a]">
-            No memories match your search.
-          </p>
-        )}
-      </div>
-      <button
-        type="button"
-        className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-white/[0.14] bg-[#171719] text-xs font-medium text-[#e2e2e6] transition hover:border-[#ffdc00]/40 hover:text-[#ffdc00]"
-      >
-        <Plus size={17} /> Add to memory
-      </button>
     </section>
   );
 }
@@ -1760,18 +1569,6 @@ function MainChatPanel({ currentUser, onLogout }) {
           <button
             type="button"
             onClick={() =>
-              openSection(activeSection === "memory" ? "chat" : "memory")
-            }
-            title="Memory"
-            aria-label="Memory"
-            aria-pressed={activeSection === "memory"}
-            className={`grid size-8 shrink-0 place-items-center rounded-lg transition hover:bg-white/[0.07] ${activeSection === "memory" ? "bg-[#ffdc00]/[0.12] text-[#ffdc00]" : "text-[#a9a9ae] hover:text-white"}`}
-          >
-            <Database size={18} />
-          </button>
-          <button
-            type="button"
-            onClick={() =>
               openSection(activeSection === "settings" ? "chat" : "settings")
             }
             title="Settings"
@@ -2066,8 +1863,6 @@ function MainChatPanel({ currentUser, onLogout }) {
                   : ""
           }
         />
-      ) : activeSection === "memory" ? (
-        <MemoryView />
       ) : activeSection === "settings" ? (
         <SettingsView />
       ) : (
