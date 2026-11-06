@@ -744,6 +744,7 @@ function ToolsView({
   onSelectImage,
   isUploadingPdf,
   isUploadingImage,
+  extensionAccessEnabled,
   notice,
 }) {
   const pdfInputRef = useRef(null);
@@ -780,6 +781,7 @@ function ToolsView({
     "Email Draft": "Draft a professional email using my notes.",
   };
   const handleToolClick = (title) => {
+    if (!extensionAccessEnabled) return;
     if (title === "PDF Q&A") {
       pdfInputRef.current?.click();
       return;
@@ -823,12 +825,14 @@ function ToolsView({
       <div className="mb-3 flex items-center justify-between px-1">
         <h1 className="text-lg font-semibold tracking-tight">Tools</h1>
       </div>
-      {notice && (
+      {(!extensionAccessEnabled || notice) && (
         <p
           role="status"
           className="mb-2 rounded-lg border border-[#ffdc00]/20 bg-[#ffdc00]/[0.06] px-3 py-2 text-[11px] leading-4 text-[#d9d2a2]"
         >
-          {notice}
+          {!extensionAccessEnabled
+            ? "Extension Access is off. Turn it on in Settings to use Lurph tools."
+            : notice}
         </p>
       )}
       <div className="grid grid-cols-2 gap-2.5">
@@ -1186,6 +1190,8 @@ function MainChatPanel({ currentUser, onLogout }) {
   const [conversationId, setConversationId] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [status, setStatus] = useState("");
+  const [extensionAccessEnabled, setExtensionAccessEnabled] = useState(false);
+  const [isExtensionAccessLoaded, setIsExtensionAccessLoaded] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("chat");
   const [historySearch, setHistorySearch] = useState("");
@@ -1202,6 +1208,69 @@ function MainChatPanel({ currentUser, onLogout }) {
   const processedSelectionIdRef = useRef(null);
   const selectedModel =
     CHAT_MODELS.find((item) => item.key === model) || CHAT_MODELS[0];
+
+  // Keep the chat composer in sync with the Settings master switch and
+  // Chrome's optional all-sites permission. Access changes are reflected
+  // immediately in this side panel without requiring a reload.
+  useEffect(() => {
+    const chromeApi = globalThis.chrome;
+    const storage = chromeApi?.storage?.local;
+    let active = true;
+
+    const refreshAccess = async () => {
+      const enabled = await canReadWebsiteContent();
+      if (active) {
+        setExtensionAccessEnabled(enabled);
+        setIsExtensionAccessLoaded(true);
+        if (!enabled) {
+          setSelectedTextContext(null);
+          setClearSelectedTextContext(false);
+        }
+      }
+    };
+
+    if (!storage) {
+      setExtensionAccessEnabled(false);
+      setIsExtensionAccessLoaded(true);
+      return () => {
+        active = false;
+      };
+    }
+
+    const handleStorageChange = (changes, areaName) => {
+      if (areaName !== "local" || !changes[EXTENSION_ACCESS_STORAGE_KEY])
+        return;
+      const nextValue = changes[EXTENSION_ACCESS_STORAGE_KEY].newValue === true;
+      if (!nextValue) {
+        // Fail closed synchronously as soon as the user switches access off.
+        setExtensionAccessEnabled(false);
+        setIsExtensionAccessLoaded(true);
+        setSelectedTextContext(null);
+        setClearSelectedTextContext(false);
+        setStatus(
+          "Extension Access is turned off. Enable it in Settings to use Lurph.",
+        );
+      } else {
+        setIsExtensionAccessLoaded(false);
+        refreshAccess();
+        setStatus("");
+      }
+    };
+
+    const handlePermissionRemoved = () => {
+      refreshAccess();
+    };
+
+    storage.onChanged?.addListener(handleStorageChange);
+    chromeApi.permissions?.onRemoved?.addListener(handlePermissionRemoved);
+    refreshAccess();
+
+    return () => {
+      active = false;
+      storage.onChanged?.removeListener(handleStorageChange);
+      chromeApi.permissions?.onRemoved?.removeListener(handlePermissionRemoved);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -1359,6 +1428,12 @@ function MainChatPanel({ currentUser, onLogout }) {
   };
 
   const handleQuickAction = (suggestedPrompt, toolName = "") => {
+    if (!extensionAccessEnabled) {
+      setStatus(
+        "Extension Access is turned off. Enable it in Settings to use Lurph.",
+      );
+      return;
+    }
     setPrompt(
       toolName === "Translate" || toolName === "Rewrite" ? "" : suggestedPrompt,
     );
@@ -1389,6 +1464,13 @@ function MainChatPanel({ currentUser, onLogout }) {
 
   const handleImageSelect = async (file, startNewChat = false) => {
     if (!file) return;
+    if (!(await canReadWebsiteContent())) {
+      setExtensionAccessEnabled(false);
+      setStatus(
+        "Extension Access is turned off. Enable it in Settings to use Lurph.",
+      );
+      return;
+    }
     const extension = file.name.split(".").pop()?.toLowerCase();
     const extensionMime =
       {
@@ -1446,6 +1528,13 @@ function MainChatPanel({ currentUser, onLogout }) {
 
   const handlePdfSelect = async (file) => {
     if (!file) return;
+    if (!(await canReadWebsiteContent())) {
+      setExtensionAccessEnabled(false);
+      setStatus(
+        "Extension Access is turned off. Enable it in Settings to use Lurph.",
+      );
+      return;
+    }
     if (!file.name.toLowerCase().endsWith(".pdf")) {
       setStatus("Please choose a PDF file.");
       return;
@@ -1636,6 +1725,18 @@ function MainChatPanel({ currentUser, onLogout }) {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt || isSending) return;
 
+    // Re-check the stored master switch and live Chrome grant at submit time;
+    // disabling the composer is UI feedback, not the security boundary.
+    const hasWebsiteAccess = await canReadWebsiteContent();
+    if (!hasWebsiteAccess) {
+      setExtensionAccessEnabled(false);
+      setIsExtensionAccessLoaded(true);
+      setStatus(
+        "Extension Access is turned off. Enable it in Settings to use Lurph.",
+      );
+      return;
+    }
+
     const submittedTool = TOOL_MARKERS[activePromptTool] || "";
     const translation =
       activePromptTool === "Translate"
@@ -1800,6 +1901,13 @@ function MainChatPanel({ currentUser, onLogout }) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    if (!(await canReadWebsiteContent())) {
+      setExtensionAccessEnabled(false);
+      setStatus(
+        "Extension Access is turned off. Enable it in Settings to use Lurph.",
+      );
+      return;
+    }
 
     const extension = file.name.split(".").pop()?.toLowerCase();
     const isImage =
@@ -2316,6 +2424,9 @@ function MainChatPanel({ currentUser, onLogout }) {
           onSelectImage={(file) => handleImageSelect(file, true)}
           isUploadingPdf={isUploadingPdf}
           isUploadingImage={isUploadingImage}
+          extensionAccessEnabled={
+            extensionAccessEnabled && isExtensionAccessLoaded
+          }
           notice={
             isUploadingPdf
               ? "Reading your PDF…"
@@ -2538,13 +2649,36 @@ function MainChatPanel({ currentUser, onLogout }) {
                 )}
               </div>
             )}
+            {!extensionAccessEnabled && isExtensionAccessLoaded && (
+              <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-[#ffdc00]/25 bg-[#ffdc00]/[0.06] px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-[#f0d94b]">
+                    Extension Access is off
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-4 text-[#b6b1a0]">
+                    Turn it on in Settings to use Lurph on websites.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openSection("settings")}
+                  className="shrink-0 rounded-lg border border-[#ffdc00]/35 px-2.5 py-1.5 text-[11px] font-medium text-[#ffdc00] transition hover:bg-[#ffdc00]/[0.08]"
+                >
+                  Open Settings
+                </button>
+              </div>
+            )}
             <form
               onSubmit={handleSubmit}
-              className="rounded-xl border border-[#ffdc00]/80 bg-[#121214] p-2 shadow-[0_8px_28px_rgba(0,0,0,.22)] focus-within:border-[#ffdc00]/80"
+              aria-disabled={
+                !extensionAccessEnabled || !isExtensionAccessLoaded
+              }
+              className={`rounded-xl border bg-[#121214] p-2 shadow-[0_8px_28px_rgba(0,0,0,.22)] ${extensionAccessEnabled && isExtensionAccessLoaded ? "border-[#ffdc00]/80 focus-within:border-[#ffdc00]/80" : "border-white/[0.10] opacity-65"}`}
             >
               <textarea
                 ref={promptTextareaRef}
                 value={prompt}
+                disabled={!extensionAccessEnabled || !isExtensionAccessLoaded}
                 onChange={(event) => {
                   setPrompt(event.target.value);
                   if (status) setStatus("");
@@ -2557,17 +2691,19 @@ function MainChatPanel({ currentUser, onLogout }) {
                 }}
                 rows={1}
                 placeholder={
-                  activePromptTool === "Translate"
-                    ? "Type or paste text to translate..."
-                    : activePromptTool === "Rewrite"
-                      ? "Type or paste text to rewrite..."
-                      : pdfAttachment
-                        ? "Ask Lurph a question about this PDF..."
-                        : imageAttachment
-                          ? "Ask Lurph a question about this image..."
-                          : selectedTextContext
-                            ? "Ask Lurph about the selected text..."
-                            : "Ask Lurph anything about this page..."
+                  !extensionAccessEnabled || !isExtensionAccessLoaded
+                    ? "Enable Extension Access in Settings to use Lurph..."
+                    : activePromptTool === "Translate"
+                      ? "Type or paste text to translate..."
+                      : activePromptTool === "Rewrite"
+                        ? "Type or paste text to rewrite..."
+                        : pdfAttachment
+                          ? "Ask Lurph a question about this PDF..."
+                          : imageAttachment
+                            ? "Ask Lurph a question about this image..."
+                            : selectedTextContext
+                              ? "Ask Lurph about the selected text..."
+                              : "Ask Lurph anything about this page..."
                 }
                 className="min-h-[40px] w-full resize-none overflow-y-hidden bg-transparent px-1 py-0.5 text-[13px] leading-5 text-[#f4f4f7] outline-none placeholder:text-[#898991]"
                 aria-label="Ask Lurph"
@@ -2584,11 +2720,12 @@ function MainChatPanel({ currentUser, onLogout }) {
                   id="lurph-attachment"
                   accept=".txt,.md,.csv,.json,image/*,text/plain,text/markdown,text/csv,application/json"
                   onChange={handleAttach}
+                  disabled={!extensionAccessEnabled || !isExtensionAccessLoaded}
                 />
                 <label
                   htmlFor="lurph-attachment"
                   title="Attach an image or text file"
-                  className="grid size-7 cursor-pointer place-items-center rounded-lg text-[#a8a8b0] transition hover:bg-white/[0.06] hover:text-white"
+                  className={`grid size-7 place-items-center rounded-lg text-[#a8a8b0] transition ${extensionAccessEnabled && isExtensionAccessLoaded ? "cursor-pointer hover:bg-white/[0.06] hover:text-white" : "pointer-events-none cursor-not-allowed opacity-40"}`}
                 >
                   <Paperclip size={16} />
                 </label>
@@ -2597,7 +2734,8 @@ function MainChatPanel({ currentUser, onLogout }) {
                   onClick={() => setWebSearchEnabled((enabled) => !enabled)}
                   title="Toggle web search"
                   aria-pressed={webSearchEnabled}
-                  className={`grid size-7 place-items-center rounded-lg transition hover:bg-white/[0.06] ${webSearchEnabled ? "bg-[#ffdc00]/[0.12] text-[#ffdc00]" : "text-[#a8a8b0] hover:text-white"}`}
+                  disabled={!extensionAccessEnabled || !isExtensionAccessLoaded}
+                  className={`grid size-7 place-items-center rounded-lg transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40 ${webSearchEnabled ? "bg-[#ffdc00]/[0.12] text-[#ffdc00]" : "text-[#a8a8b0] hover:text-white"}`}
                 >
                   <Globe size={16} />
                 </button>
@@ -2610,7 +2748,12 @@ function MainChatPanel({ currentUser, onLogout }) {
                 </span>
                 <button
                   type="submit"
-                  disabled={!prompt.trim() || isSending}
+                  disabled={
+                    !prompt.trim() ||
+                    isSending ||
+                    !extensionAccessEnabled ||
+                    !isExtensionAccessLoaded
+                  }
                   title="Send message"
                   aria-label="Send message"
                   className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#ffdc00] text-[#171600] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
