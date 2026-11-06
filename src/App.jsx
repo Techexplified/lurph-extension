@@ -699,6 +699,19 @@ const TOOL_TITLES_BY_MARKER = Object.fromEntries(
   Object.entries(TOOL_MARKERS).map(([title, marker]) => [marker, title]),
 );
 
+const REWRITE_TONES = [
+  "Professional",
+  "Friendly",
+  "Casual",
+  "Formal",
+  "Persuasive",
+  "Concise",
+  "Academic",
+  "Creative",
+  "Simple",
+  "Confident",
+];
+
 const TOOL_MESSAGE_LABELS = {
   rewrite: { user: "Original text", assistant: "Rewritten text" },
   translate: { user: "Source text", assistant: "Translation" },
@@ -750,7 +763,6 @@ function ToolsView({
     },
   ];
   const toolPrompts = {
-    Rewrite: "Rewrite this text clearly and professionally.",
     "Image Analysis": IMAGE_ANALYSIS_PROMPT,
     "Email Draft": "Draft a professional email using my notes.",
   };
@@ -763,7 +775,7 @@ function ToolsView({
       imageInputRef.current?.click();
       return;
     }
-    if (title === "Translate") {
+    if (title === "Translate" || title === "Rewrite") {
       onUsePrompt("", title);
       return;
     }
@@ -964,6 +976,7 @@ function MainChatPanel({ currentUser, onLogout }) {
   const [translateFromLanguage, setTranslateFromLanguage] =
     useState("Auto-detect");
   const [translateToLanguage, setTranslateToLanguage] = useState("English");
+  const [rewriteTone, setRewriteTone] = useState("Professional");
   const [pageTitle, setPageTitle] = useState("Current tab");
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [attachedFileName, setAttachedFileName] = useState("");
@@ -1146,8 +1159,11 @@ function MainChatPanel({ currentUser, onLogout }) {
   };
 
   const handleQuickAction = (suggestedPrompt, toolName = "") => {
-    setPrompt(toolName === "Translate" ? "" : suggestedPrompt);
+    setPrompt(
+      toolName === "Translate" || toolName === "Rewrite" ? "" : suggestedPrompt,
+    );
     setActivePromptTool(toolName || "");
+    if (toolName === "Rewrite") setRewriteTone("Professional");
     setStatus("");
   };
 
@@ -1157,6 +1173,7 @@ function MainChatPanel({ currentUser, onLogout }) {
     setMessages([]);
     setPrompt("");
     setActivePromptTool("");
+    setRewriteTone("Professional");
     setStatus("");
     setAttachedFileName("");
     setAttachedFileText("");
@@ -1283,6 +1300,7 @@ function MainChatPanel({ currentUser, onLogout }) {
         tool: message.tool || legacyConversationTool,
         translationFrom: message.translationFrom || "",
         translationTo: message.translationTo || "",
+        rewriteTone: message.rewriteTone || "",
       }));
       setMessages(loadedMessages);
       if (conversation.lastModel) setModel(conversation.lastModel);
@@ -1317,6 +1335,10 @@ function MainChatPanel({ currentUser, onLogout }) {
           lastTranslationMessage.translationTo || "English",
         );
       }
+      const lastRewriteMessage = [...loadedMessages]
+        .reverse()
+        .find((message) => message.tool === "rewrite");
+      setRewriteTone(lastRewriteMessage?.rewriteTone || "Professional");
       setClearPdfAttachment(false);
       setPrompt("");
       setStatus("");
@@ -1422,6 +1444,8 @@ function MainChatPanel({ currentUser, onLogout }) {
             toLanguage: translateToLanguage,
           }
         : undefined;
+    const rewrite =
+      activePromptTool === "Rewrite" ? { tone: rewriteTone } : undefined;
     const userMessage = {
       id: createChatMessageId(),
       role: "user",
@@ -1429,6 +1453,7 @@ function MainChatPanel({ currentUser, onLogout }) {
       tool: submittedTool,
       translationFrom: translation?.fromLanguage || "",
       translationTo: translation?.toLanguage || "",
+      rewriteTone: rewrite?.tone || "",
     };
     const nextMessages = [...messages, userMessage];
     const isFullPageSummary = activePromptTool === "Summarize this page";
@@ -1504,6 +1529,7 @@ function MainChatPanel({ currentUser, onLogout }) {
           : undefined,
         tool: submittedTool,
         translation,
+        rewrite,
         webSearchEnabled,
       });
 
@@ -1525,6 +1551,7 @@ function MainChatPanel({ currentUser, onLogout }) {
           tool: result.tool || submittedTool,
           translationFrom: translation?.fromLanguage || "",
           translationTo: translation?.toLanguage || "",
+          rewriteTone: rewrite?.tone || "",
         },
       ]);
       if (result.historySaved === false) {
@@ -1845,6 +1872,39 @@ function MainChatPanel({ currentUser, onLogout }) {
                   </span>
                 </label>
               </div>
+            </div>
+          </div>
+        )}
+
+      {activeSection === "chat" &&
+        !isHistoryOpen &&
+        activePromptTool === "Rewrite" && (
+          <div className="shrink-0 px-3 pb-2">
+            <div className="rounded-xl border border-white/[0.10] bg-gradient-to-br from-[#171b22] to-[#111318] p-3">
+              <label className="block">
+                <span className="mb-2 flex items-center gap-2 text-xs font-medium text-[#d5d7dc]">
+                  <PenLine size={15} className="text-[#c8cbd2]" />
+                  Tone
+                </span>
+                <span className="relative block max-w-[220px]">
+                  <select
+                    value={rewriteTone}
+                    onChange={(event) => setRewriteTone(event.target.value)}
+                    aria-label="Rewrite tone"
+                    className="h-10 w-full appearance-none rounded-lg border border-white/[0.10] bg-[#1b222c] px-3 pr-8 text-xs text-[#f0f1f4] outline-none transition focus:border-[#ffdc00]/60"
+                  >
+                    {REWRITE_TONES.map((tone) => (
+                      <option key={tone} value={tone}>
+                        {tone}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    size={15}
+                    className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[#a9afb9]"
+                  />
+                </span>
+              </label>
             </div>
           </div>
         )}
@@ -2289,13 +2349,15 @@ function MainChatPanel({ currentUser, onLogout }) {
                 placeholder={
                   activePromptTool === "Translate"
                     ? "Type or paste text to translate..."
-                    : pdfAttachment
-                      ? "Ask Lurph a question about this PDF..."
-                      : imageAttachment
-                        ? "Ask Lurph a question about this image..."
-                        : selectedTextContext
-                          ? "Ask Lurph about the selected text..."
-                          : "Ask Lurph anything about this page..."
+                    : activePromptTool === "Rewrite"
+                      ? "Type or paste text to rewrite..."
+                      : pdfAttachment
+                        ? "Ask Lurph a question about this PDF..."
+                        : imageAttachment
+                          ? "Ask Lurph a question about this image..."
+                          : selectedTextContext
+                            ? "Ask Lurph about the selected text..."
+                            : "Ask Lurph anything about this page..."
                 }
                 className="min-h-[40px] w-full resize-none overflow-y-hidden bg-transparent px-1 py-0.5 text-[13px] leading-5 text-[#f4f4f7] outline-none placeholder:text-[#898991]"
                 aria-label="Ask Lurph"
