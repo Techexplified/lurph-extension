@@ -686,6 +686,32 @@ function createChatMessageId() {
   );
 }
 
+const TOOL_MARKERS = {
+  Rewrite: "rewrite",
+  Translate: "translate",
+  "Image Analysis": "image-analysis",
+  "Email Draft": "email-draft",
+  "PDF Q&A": "pdf-qa",
+  "Summarize this page": "summarize-page",
+};
+
+const TOOL_TITLES_BY_MARKER = Object.fromEntries(
+  Object.entries(TOOL_MARKERS).map(([title, marker]) => [marker, title]),
+);
+
+const TOOL_MESSAGE_LABELS = {
+  rewrite: { user: "Original text", assistant: "Rewritten text" },
+  translate: { user: "Source text", assistant: "Translation" },
+  "image-analysis": { user: "Request", assistant: "Analysis" },
+  "email-draft": { user: "Request", assistant: "Email draft" },
+  "pdf-qa": { user: "Question", assistant: "Answer" },
+  "summarize-page": { user: "Request", assistant: "Summary" },
+};
+
+function getToolMessageLabel(message) {
+  return TOOL_MESSAGE_LABELS[message.tool]?.[message.role] || "";
+}
+
 function ToolsView({
   onUsePrompt,
   onSelectPdf,
@@ -1246,12 +1272,15 @@ function MainChatPanel({ currentUser, onLogout }) {
       const result = await getConversation(item.id);
       const conversation = result.conversation;
       setConversationId(conversation.id);
+      const legacyConversationTool = conversation.pdfAttachment?.name
+        ? "pdf-qa"
+        : "";
       const loadedMessages = (conversation.messages || []).map((message) => ({
         id: message.id || createChatMessageId(),
         role: message.role,
         content: message.content,
         model: message.providerModel || message.model || "",
-        tool: message.tool || "",
+        tool: message.tool || legacyConversationTool,
         translationFrom: message.translationFrom || "",
         translationTo: message.translationTo || "",
       }));
@@ -1271,16 +1300,15 @@ function MainChatPanel({ currentUser, onLogout }) {
           ? { ...conversation.pdfAttachment, text: "" }
           : null,
       );
+      const lastToolMessage = [...loadedMessages]
+        .reverse()
+        .find((message) => TOOL_TITLES_BY_MARKER[message.tool]);
+      setActivePromptTool(
+        lastToolMessage ? TOOL_TITLES_BY_MARKER[lastToolMessage.tool] : "",
+      );
       const lastTranslationMessage = [...loadedMessages]
         .reverse()
         .find((message) => message.tool === "translate");
-      setActivePromptTool(
-        conversation.pdfAttachment?.name
-          ? "PDF Q&A"
-          : lastTranslationMessage
-            ? "Translate"
-            : "",
-      );
       if (lastTranslationMessage) {
         setTranslateFromLanguage(
           lastTranslationMessage.translationFrom || "Auto-detect",
@@ -1386,12 +1414,7 @@ function MainChatPanel({ currentUser, onLogout }) {
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt || isSending) return;
 
-    const submittedTool =
-      activePromptTool === "Translate"
-        ? "translate"
-        : activePromptTool === "Email Draft"
-          ? "email-draft"
-          : "";
+    const submittedTool = TOOL_MARKERS[activePromptTool] || "";
     const translation =
       activePromptTool === "Translate"
         ? {
@@ -2103,9 +2126,12 @@ function MainChatPanel({ currentUser, onLogout }) {
                         : "mr-auto w-full rounded-xl border border-white/[0.08] bg-[#141416] px-3.5 py-3 text-[13px] leading-6 text-[#e7e7eb]"
                     }
                   >
-                    {message.role === "assistant" && (
-                      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-[#ffdc00]">
-                        Lurph
+                    {(getToolMessageLabel(message) ||
+                      message.role === "assistant") && (
+                      <p
+                        className={`mb-1.5 text-[10px] font-semibold tracking-wide ${message.role === "assistant" ? "text-[#ffdc00]" : "text-[#c5c5ce]"}`}
+                      >
+                        {getToolMessageLabel(message) || "Lurph"}
                       </p>
                     )}
                     <div className="whitespace-pre-wrap break-words">
