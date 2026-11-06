@@ -46,6 +46,7 @@ import {
   PanelRight,
   LogOut,
   Search,
+  SlidersHorizontal,
   Pencil,
   Trash2,
   X,
