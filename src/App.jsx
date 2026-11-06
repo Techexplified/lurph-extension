@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { clearTokens, getTokens, setTokens } from "./lib/tokenStorage.js";
 import {
+  EXTENSION_ACCESS_STORAGE_KEY,
+  PERMISSION_LEVEL_STORAGE_KEY,
+  DEFAULT_PERMISSION_LEVEL,
+  ALL_SITES_ORIGIN,
+  canReadWebsiteContent,
+  hasAllSitesHostPermission,
+  normalizePermissionLevel,
+} from "./lib/extensionSettings.js";
+import {
   getCurrentUser,
   loginAccount,
   loginWithGoogle,
@@ -588,6 +597,10 @@ async function readActivePageContext({ maxChars = MAX_PAGE_TEXT_CHARS } = {}) {
   const chromeApi = globalThis.chrome;
   if (!chromeApi?.tabs?.query) return null;
 
+  // The master setting and Chrome's optional host permission must both allow
+  // access before Lurph reads any webpage content.
+  if (!(await canReadWebsiteContent())) return null;
+
   try {
     const [tab] = await chromeApi.tabs.query({
       active: true,
@@ -864,17 +877,105 @@ function ToolsView({
 }
 
 function SettingsView() {
-  const [extensionAccess, setExtensionAccess] = useState(true);
-  const [permissionLevel, setPermissionLevel] = useState("Read content");
+  const [extensionAccess, setExtensionAccess] = useState(false);
+  const [permissionLevel, setPermissionLevel] = useState(
+    DEFAULT_PERMISSION_LEVEL,
+  );
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [isUpdatingAccess, setIsUpdatingAccess] = useState(false);
+  const [settingsNotice, setSettingsNotice] = useState("");
 
-  const Toggle = ({ checked, onChange, label }) => (
+  useEffect(() => {
+    const chromeApi = globalThis.chrome;
+    const storage = chromeApi?.storage?.local;
+    if (!storage) {
+      setSettingsNotice(
+        "Settings are available in the installed Chrome extension.",
+      );
+      setIsLoadingSettings(false);
+      return undefined;
+    }
+
+    let active = true;
+    const loadSettings = async () => {
+      try {
+        const stored = await storage.get([
+          EXTENSION_ACCESS_STORAGE_KEY,
+          PERMISSION_LEVEL_STORAGE_KEY,
+        ]);
+        const chromePermissionGranted = await hasAllSitesHostPermission();
+        const hasSavedAccessSetting =
+          typeof stored[EXTENSION_ACCESS_STORAGE_KEY] === "boolean";
+        // Existing installs inherit the access they already granted during
+        // onboarding. New installs remain disabled until Chrome grants access.
+        const shouldEnableAccess = hasSavedAccessSetting
+          ? stored[EXTENSION_ACCESS_STORAGE_KEY] && chromePermissionGranted
+          : chromePermissionGranted;
+        const nextPermissionLevel = normalizePermissionLevel(
+          stored[PERMISSION_LEVEL_STORAGE_KEY],
+        );
+
+        if (active) {
+          setExtensionAccess(shouldEnableAccess);
+          setPermissionLevel(nextPermissionLevel);
+        }
+
+        if (
+          !hasSavedAccessSetting ||
+          stored[EXTENSION_ACCESS_STORAGE_KEY] !== shouldEnableAccess ||
+          stored[PERMISSION_LEVEL_STORAGE_KEY] !== nextPermissionLevel
+        ) {
+          await storage.set({
+            [EXTENSION_ACCESS_STORAGE_KEY]: shouldEnableAccess,
+            [PERMISSION_LEVEL_STORAGE_KEY]: nextPermissionLevel,
+          });
+        }
+      } catch (error) {
+        if (active) {
+          setSettingsNotice(
+            error?.message || "Could not load your extension settings.",
+          );
+        }
+      } finally {
+        if (active) setIsLoadingSettings(false);
+      }
+    };
+
+    loadSettings();
+
+    const handleStorageChange = (changes, areaName) => {
+      if (areaName !== "local") return;
+      if (changes[EXTENSION_ACCESS_STORAGE_KEY]) {
+        setExtensionAccess(
+          changes[EXTENSION_ACCESS_STORAGE_KEY].newValue === true,
+        );
+      }
+      if (changes[PERMISSION_LEVEL_STORAGE_KEY]) {
+        setPermissionLevel(
+          normalizePermissionLevel(
+            changes[PERMISSION_LEVEL_STORAGE_KEY].newValue,
+          ),
+        );
+      }
+    };
+
+    chromeApi.storage.onChanged?.addListener(handleStorageChange);
+    return () => {
+      active = false;
+      chromeApi.storage.onChanged?.removeListener(handleStorageChange);
+    };
+  }, []);
+
+  const Toggle = ({ checked, onChange, label, disabled = false }) => (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      aria-busy={disabled}
+      disabled={disabled}
       onClick={onChange}
-      className={`relative h-5 w-10 shrink-0 rounded-full transition ${checked ? "bg-[#ffdc00]" : "bg-[#55555b]"}`}
+      className={`relative h-5 w-10 shrink-0 rounded-full transition disabled:cursor-wait disabled:opacity-60 ${checked ? "bg-[#ffdc00]" : "bg-[#55555b]"}`}
     >
       <span
         className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-all ${checked ? "left-[22px]" : "left-0.5"}`}
@@ -882,18 +983,98 @@ function SettingsView() {
     </button>
   );
 
+  const handleExtensionAccessToggle = async () => {
+    if (isLoadingSettings || isUpdatingAccess) return;
+    const chromeApi = globalThis.chrome;
+    if (!chromeApi?.permissions || !chromeApi?.storage?.local) {
+      setSettingsNotice(
+        "Website permissions can only be changed in the installed Chrome extension.",
+      );
+      return;
+    }
+
+    setSettingsNotice("");
+    setIsUpdatingAccess(true);
+
+    try {
+      if (extensionAccess) {
+        // Disable Lurph in storage first so page-reading checks fail immediately,
+        // then revoke the optional all-sites host permission in Chrome.
+        setExtensionAccess(false);
+        await chromeApi.storage.local.set({
+          [EXTENSION_ACCESS_STORAGE_KEY]: false,
+        });
+        await chromeApi.storage.local.remove("lurph_pending_selection");
+        if (chromeApi.permissions.remove) {
+          await chromeApi.permissions.remove({
+            origins: [ALL_SITES_ORIGIN],
+          });
+        }
+        setSettingsNotice("Lurph is disabled on all websites.");
+        return;
+      }
+
+      // Call permissions.request directly from this click handler. Chrome
+      // requires an explicit user gesture for optional host permission prompts.
+      const request = chromeApi.permissions.request({
+        origins: [ALL_SITES_ORIGIN],
+      });
+      const granted = await request;
+      if (!granted) {
+        setExtensionAccess(false);
+        await chromeApi.storage.local.set({
+          [EXTENSION_ACCESS_STORAGE_KEY]: false,
+        });
+        setSettingsNotice(
+          "Website access was not granted. Lurph will remain disabled on websites.",
+        );
+        return;
+      }
+
+      await chromeApi.storage.local.set({
+        [EXTENSION_ACCESS_STORAGE_KEY]: true,
+      });
+      setExtensionAccess(true);
+      setSettingsNotice("Lurph is enabled on all websites.");
+    } catch (error) {
+      setSettingsNotice(
+        error?.message || "Could not update website access. Please try again.",
+      );
+    } finally {
+      setIsUpdatingAccess(false);
+    }
+  };
+
+  const handlePermissionLevelChange = async (level) => {
+    if (isLoadingSettings || permissionLevel === level) return;
+    setPermissionLevel(level);
+    setSettingsNotice("");
+    try {
+      await globalThis.chrome?.storage?.local?.set({
+        [PERMISSION_LEVEL_STORAGE_KEY]: level,
+      });
+    } catch (error) {
+      setSettingsNotice(
+        error?.message || "Could not save the permission level.",
+      );
+    }
+  };
+
   const permissionOptions = [
     {
       name: "Read content",
+      value: "read",
       detail: "Allows Lurph to read and understand the content on the page.",
     },
     {
       name: "Create content",
+      value: "create",
       detail:
         "Allows Lurph to read and create content (e.g., fill forms, write, edit).",
     },
     {
       name: "Full access",
+      value: "full",
       detail:
         "Allows Lurph to read, create, and interact with the site (where supported).",
     },
@@ -924,8 +1105,9 @@ function SettingsView() {
           <div className="flex justify-end border-t border-white/[0.07] px-3 py-2.5">
             <Toggle
               checked={extensionAccess}
-              onChange={() => setExtensionAccess((value) => !value)}
+              onChange={handleExtensionAccessToggle}
               label="Extension access"
+              disabled={isLoadingSettings || isUpdatingAccess}
             />
           </div>
         </div>
@@ -933,20 +1115,22 @@ function SettingsView() {
         <div className="rounded-xl border border-white/[0.10] bg-gradient-to-br from-[#19191b] to-[#111113] p-3">
           <h2 className="text-xs font-semibold">Permission Levels</h2>
           <p className="mt-1 text-[10px] text-[#9d9da5]">
-            Choose what Lurph can do on each site.
+            Choose what Lurph can do on websites.
           </p>
           <div className="mt-2.5 space-y-1.5">
-            {permissionOptions.map(({ name, detail }) => (
+            {permissionOptions.map(({ name, value, detail }) => (
               <button
-                key={name}
+                key={value}
                 type="button"
-                onClick={() => setPermissionLevel(name)}
-                className={`flex w-full items-start gap-2 rounded-lg border p-2.5 text-left transition ${permissionLevel === name ? "border-[#ffdc00]/80 bg-[#ffdc00]/[0.055]" : "border-white/[0.08] bg-[#111113] hover:border-white/[0.16]"}`}
+                disabled={isLoadingSettings}
+                onClick={() => handlePermissionLevelChange(value)}
+                aria-pressed={permissionLevel === value}
+                className={`flex w-full items-start gap-2 rounded-lg border p-2.5 text-left transition disabled:cursor-wait disabled:opacity-60 ${permissionLevel === value ? "border-[#ffdc00]/80 bg-[#ffdc00]/[0.055]" : "border-white/[0.08] bg-[#111113] hover:border-white/[0.16]"}`}
               >
                 <span
-                  className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border ${permissionLevel === name ? "border-[#ffdc00] bg-[#ffdc00]" : "border-[#77777e]"}`}
+                  className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border ${permissionLevel === value ? "border-[#ffdc00] bg-[#ffdc00]" : "border-[#77777e]"}`}
                 >
-                  {permissionLevel === name && (
+                  {permissionLevel === value && (
                     <span className="size-1.5 rounded-full bg-black" />
                   )}
                 </span>
@@ -962,6 +1146,15 @@ function SettingsView() {
             ))}
           </div>
         </div>
+        {settingsNotice && (
+          <p
+            className="px-1 text-[10px] leading-4 text-[#c8c2a2]"
+            role="status"
+            aria-live="polite"
+          >
+            {settingsNotice}
+          </p>
+        )}
       </div>
     </section>
   );
@@ -1014,12 +1207,19 @@ function MainChatPanel({ currentUser, onLogout }) {
     let active = true;
     const tabs = globalThis.chrome?.tabs;
     if (!tabs?.query) return undefined;
-    tabs
-      .query({ active: true, lastFocusedWindow: true })
-      .then(([tab]) => {
+    (async () => {
+      try {
+        const websiteAccessEnabled = await canReadWebsiteContent();
+        if (!active || !websiteAccessEnabled) return;
+        const [tab] = await tabs.query({
+          active: true,
+          lastFocusedWindow: true,
+        });
         if (active && tab?.title) setPageTitle(tab.title);
-      })
-      .catch(() => {});
+      } catch {
+        // Tab metadata is intentionally not read when website access is off.
+      }
+    })();
     return () => {
       active = false;
     };
@@ -1461,6 +1661,13 @@ function MainChatPanel({ currentUser, onLogout }) {
     setStatus(isFullPageSummary ? "Reading the current webpage…" : "");
 
     try {
+      if (selectedTextContext && !(await canReadWebsiteContent())) {
+        setStatus(
+          "Enable Extension Access in Settings and grant website permission before asking Lurph about selected webpage text.",
+        );
+        return;
+      }
+
       const activePageContext =
         activePromptTool === "Translate" ||
         selectedTextContext ||
@@ -1489,8 +1696,11 @@ function MainChatPanel({ currentUser, onLogout }) {
             : activePageContext;
 
       if (isFullPageSummary && !pageContext?.text?.trim()) {
+        const websiteAccessEnabled = await canReadWebsiteContent();
         setStatus(
-          "Lurph could not read this webpage. Open a regular website, grant Lurph access to the site if prompted, and try again. Chrome internal pages and some protected pages cannot be read.",
+          websiteAccessEnabled
+            ? "Lurph could not read this webpage. Open a regular website and try again. Chrome internal pages and some protected pages cannot be read."
+            : "Enable Extension Access in Settings and grant website permission before summarizing a webpage.",
         );
         return;
       }
@@ -2581,12 +2791,27 @@ function App() {
     // can associate the prompt with an explicit user gesture.
     if (!permissions?.request) {
       setWebsiteAccessGranted(null);
+      globalThis.chrome?.storage?.local
+        ?.set({
+          [EXTENSION_ACCESS_STORAGE_KEY]: false,
+          [PERMISSION_LEVEL_STORAGE_KEY]: DEFAULT_PERMISSION_LEVEL,
+        })
+        .catch(() => {});
       setOnboardingStep(3);
       return;
     }
-    permissions.request({ origins: ["<all_urls>"] }, (granted) => {
+    permissions.request({ origins: [ALL_SITES_ORIGIN] }, async (granted) => {
       const failed = Boolean(chrome.runtime.lastError);
-      setWebsiteAccessGranted(failed ? false : Boolean(granted));
+      const websiteAccessEnabled = !failed && Boolean(granted);
+      setWebsiteAccessGranted(websiteAccessEnabled);
+      try {
+        await chrome.storage.local.set({
+          [EXTENSION_ACCESS_STORAGE_KEY]: websiteAccessEnabled,
+          [PERMISSION_LEVEL_STORAGE_KEY]: DEFAULT_PERMISSION_LEVEL,
+        });
+      } catch (error) {
+        console.error("Could not save website access settings:", error);
+      }
       setOnboardingStep(3);
     });
   };
