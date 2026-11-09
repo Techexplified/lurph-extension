@@ -2794,8 +2794,12 @@ function App() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   const isSignup = mode === "signup";
+  const isAuthBusy = isSubmitting || isGoogleSubmitting;
 
   const switchMode = (nextMode) => {
+    // Prevent switching between Sign in and Create account while an auth
+    // request is running, including keyboard/programmatic invocations.
+    if (isAuthBusy) return;
     setMode(nextMode);
     setNotice("");
   };
@@ -3099,7 +3103,9 @@ function App() {
                 type="button"
                 role="tab"
                 aria-selected={!isSignup}
-                className={`min-h-[44px] min-w-0 rounded-md border px-2.5 py-1.5 text-[clamp(12px,1.05vw,15px)] font-medium transition-colors duration-150 ${!isSignup ? "border-[#525252] bg-gradient-to-b from-[#2d2d2d] to-[#242424] text-white shadow-[0_1px_2px_#000]" : "border-transparent bg-transparent text-[#a1a1a1] hover:text-[#f3f3f3]"}`}
+                aria-disabled={isAuthBusy}
+                disabled={isAuthBusy}
+                className={`min-h-[44px] min-w-0 rounded-md border px-2.5 py-1.5 text-[clamp(12px,1.05vw,15px)] font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:text-[#a1a1a1] ${!isSignup ? "border-[#525252] bg-gradient-to-b from-[#2d2d2d] to-[#242424] text-white shadow-[0_1px_2px_#000]" : "border-transparent bg-transparent text-[#a1a1a1] hover:text-[#f3f3f3]"}`}
                 onClick={() => switchMode("signin")}
               >
                 Sign in
@@ -3108,7 +3114,9 @@ function App() {
                 type="button"
                 role="tab"
                 aria-selected={isSignup}
-                className={`min-h-[44px] min-w-0 rounded-md border px-2.5 py-1.5 text-[clamp(12px,1.05vw,15px)] font-medium transition-colors duration-150 ${isSignup ? "border-[#525252] bg-gradient-to-b from-[#2d2d2d] to-[#242424] text-white shadow-[0_1px_2px_#000]" : "border-transparent bg-transparent text-[#a1a1a1] hover:text-[#f3f3f3]"}`}
+                aria-disabled={isAuthBusy}
+                disabled={isAuthBusy}
+                className={`min-h-[44px] min-w-0 rounded-md border px-2.5 py-1.5 text-[clamp(12px,1.05vw,15px)] font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:text-[#a1a1a1] ${isSignup ? "border-[#525252] bg-gradient-to-b from-[#2d2d2d] to-[#242424] text-white shadow-[0_1px_2px_#000]" : "border-transparent bg-transparent text-[#a1a1a1] hover:text-[#f3f3f3]"}`}
                 onClick={() => switchMode("signup")}
               >
                 Create account
@@ -3213,7 +3221,7 @@ function App() {
               </div>
 
               <button
-                className="mt-[3px] flex min-h-[47px] w-full items-center justify-center rounded-md border border-[#f4d000] bg-[#ffdc00] px-3 py-[11px] text-[clamp(14px,1.1vw,16px)] font-bold text-[#171500] shadow-[0_4px_14px_rgba(255,220,0,0.09)] transition hover:-translate-y-px hover:bg-[#ffe84b] hover:shadow-[0_5px_18px_rgba(255,220,0,0.15)] active:translate-y-0"
+                className="mt-[3px] flex min-h-[47px] w-full items-center justify-center rounded-md border border-[#f4d000] bg-[#ffdc00] px-3 py-[11px] text-[clamp(14px,1.1vw,16px)] font-bold text-[#171500] shadow-[0_4px_14px_rgba(255,220,0,0.09)] transition hover:-translate-y-px hover:bg-[#ffe84b] hover:shadow-[0_5px_18px_rgba(255,220,0,0.15)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:bg-[#ffdc00]"
                 type="submit"
                 disabled={isSubmitting}
               >
