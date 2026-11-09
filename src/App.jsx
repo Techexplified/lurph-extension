@@ -831,7 +831,7 @@ function ToolsView({
           className="mb-2 rounded-lg border border-[#ffdc00]/20 bg-[#ffdc00]/[0.06] px-3 py-2 text-[11px] leading-4 text-[#d9d2a2]"
         >
           {!extensionAccessEnabled
-            ? "Extension Access is off. Turn it on in Settings to use Lurph tools."
+            ? "Extension Access is off. Turn it on in Settings tab → Settings & Permissions → Extension Access."
             : notice}
         </p>
       )}
@@ -1257,17 +1257,26 @@ function MainChatPanel({ currentUser, onLogout }) {
       }
     };
 
+    const handlePermissionAdded = () => {
+      refreshAccess();
+    };
+
     const handlePermissionRemoved = () => {
       refreshAccess();
     };
 
-    storage.onChanged?.addListener(handleStorageChange);
+    // onChanged belongs to chrome.storage, not chrome.storage.local.
+    // Listening on the correct event is essential for reflecting an ON toggle
+    // immediately; the OFF path was also refreshed by permissions.onRemoved.
+    chromeApi.storage.onChanged?.addListener(handleStorageChange);
+    chromeApi.permissions?.onAdded?.addListener(handlePermissionAdded);
     chromeApi.permissions?.onRemoved?.addListener(handlePermissionRemoved);
     refreshAccess();
 
     return () => {
       active = false;
-      storage.onChanged?.removeListener(handleStorageChange);
+      chromeApi.storage.onChanged?.removeListener(handleStorageChange);
+      chromeApi.permissions?.onAdded?.removeListener(handlePermissionAdded);
       chromeApi.permissions?.onRemoved?.removeListener(handlePermissionRemoved);
     };
   }, []);
