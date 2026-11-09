@@ -3084,9 +3084,6 @@ function App() {
             </div>
 
             <div className="mb-[22px] flex flex-col items-center text-center">
-              <div className="mb-5 grid size-14 shrink-0 place-items-center rounded-xl bg-[#ffdc00] pb-[5px] pr-[5px] text-[43px] font-black leading-none tracking-[-3px] text-[#171600] shadow-[0_3px_14px_rgba(255,220,0,0.18)]">
-                L
-              </div>
               <h1 className="m-0 text-[clamp(23px,1.9vw,29px)] font-bold leading-tight tracking-[-0.04em] text-[#f7f7f7]">
                 {isSignup ? "Welcome to Lurph" : "Welcome back"}
               </h1>
