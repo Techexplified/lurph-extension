@@ -2204,12 +2204,12 @@ function MainChatPanel({ currentUser, onLogout }) {
         activePromptTool === "Rewrite" && (
           <div className="shrink-0 px-3 pb-2">
             <div className="rounded-xl border border-white/[0.10] bg-gradient-to-br from-[#171b22] to-[#111318] p-3">
-              <label className="block">
-                <span className="mb-2 flex items-center gap-2 text-xs font-medium text-[#d5d7dc]">
+              <label className="flex w-full items-center justify-between gap-3">
+                <span className="flex shrink-0 items-center gap-2 text-xs font-medium text-[#d5d7dc]">
                   <PenLine size={15} className="text-[#c8cbd2]" />
                   Tone
                 </span>
-                <span className="relative block max-w-[220px]">
+                <span className="relative block w-[220px] max-w-[65%] shrink-0">
                   <select
                     value={rewriteTone}
                     onChange={(event) => setRewriteTone(event.target.value)}
