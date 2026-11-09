@@ -1973,14 +1973,14 @@ function MainChatPanel({ currentUser, onLogout }) {
   return (
     <main className="lurph-chat-shell flex h-dvh min-h-[480px] w-full flex-col overflow-hidden bg-[#0a0a0b] text-[#f5f5f7]">
       <header className="flex shrink-0 items-center gap-2 px-4 pb-3 pt-4">
-        <div className="relative min-w-0 flex-1">
+        <div className="relative min-w-0 w-[min(44%,180px)] shrink-0">
           <button
             type="button"
             onClick={() => setIsModelMenuOpen((open) => !open)}
             aria-haspopup="listbox"
             aria-expanded={isModelMenuOpen}
             title="Choose AI model"
-            className="flex h-10 w-full min-w-0 max-w-[180px] items-center gap-2 rounded-xl border border-white/[0.12] bg-[#151517] px-3 text-sm transition hover:bg-[#1c1c1f]"
+            className="flex h-10 w-full min-w-0 max-w-none items-center gap-2 rounded-xl border border-white/[0.12] bg-[#151517] px-3 text-sm transition hover:bg-[#1c1c1f]"
           >
             <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[#252b50] text-[10px] font-bold text-[#d8ddff]">
               ✦
@@ -2017,7 +2017,7 @@ function MainChatPanel({ currentUser, onLogout }) {
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-0.5 whitespace-nowrap">
+        <div className="grid min-w-0 flex-1 grid-cols-5 items-center justify-items-center whitespace-nowrap">
           <button
             type="button"
             onClick={() =>
@@ -2042,10 +2042,6 @@ function MainChatPanel({ currentUser, onLogout }) {
           >
             <Settings size={18} />
           </button>
-          <span
-            className="mx-1 h-5 w-px shrink-0 bg-white/[0.10]"
-            aria-hidden="true"
-          />
           <button
             type="button"
             onClick={() => {
@@ -2072,7 +2068,7 @@ function MainChatPanel({ currentUser, onLogout }) {
           >
             <Plus size={21} />
           </button>
-          <div className="relative">
+          <div className="relative grid size-8 place-items-center">
             <button
               type="button"
               onClick={() => setIsMoreMenuOpen((open) => !open)}
