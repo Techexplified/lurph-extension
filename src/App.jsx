@@ -44,7 +44,6 @@ import {
   Settings,
   FileText,
   Lightbulb,
-  Scale,
   ListChecks,
   Paperclip,
   Globe,
@@ -501,12 +500,6 @@ const QUICK_ACTIONS = [
     title: "Explain",
     detail: "this content",
     prompt: "Explain this webpage in simple, clear language.",
-  },
-  {
-    icon: Scale,
-    title: "Compare",
-    detail: "with sources",
-    prompt: "Compare this page with reliable external sources.",
   },
   {
     icon: ListChecks,
@@ -1163,7 +1156,6 @@ function MainChatPanel({ currentUser, onLogout }) {
   const [translateToLanguage, setTranslateToLanguage] = useState("English");
   const [rewriteTone, setRewriteTone] = useState("Professional");
   const [pageTitle, setPageTitle] = useState("Current tab");
-  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [attachedFileName, setAttachedFileName] = useState("");
   const [attachedFileText, setAttachedFileText] = useState("");
   const [imageAttachment, setImageAttachment] = useState(null);
@@ -1860,7 +1852,7 @@ function MainChatPanel({ currentUser, onLogout }) {
         tool: submittedTool,
         translation,
         rewrite,
-        webSearchEnabled,
+        webSearchEnabled: false,
       });
 
       if (result.conversationId) setConversationId(result.conversationId);
@@ -2484,7 +2476,7 @@ function MainChatPanel({ currentUser, onLogout }) {
                             title === "Summarize" ? "Summarize this page" : "",
                           )
                         }
-                        className="group flex min-h-[60px] min-w-0 items-center gap-2 rounded-xl border border-white/[0.12] bg-gradient-to-br from-[#19191b] to-[#111113] p-2.5 text-left transition hover:border-[#ffdc00]/45 hover:bg-[#1b1b1b]"
+                        className={`group flex min-h-[60px] min-w-0 items-center gap-2 rounded-xl border border-white/[0.12] bg-gradient-to-br from-[#19191b] to-[#111113] p-2.5 text-left transition hover:border-[#ffdc00]/45 hover:bg-[#1b1b1b] ${title === "Find key" ? "col-span-2 mx-auto w-[calc(50%-4px)]" : ""}`}
                       >
                         <Icon
                           size={20}
@@ -2741,22 +2733,8 @@ function MainChatPanel({ currentUser, onLogout }) {
                 >
                   <Paperclip size={16} />
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setWebSearchEnabled((enabled) => !enabled)}
-                  title="Toggle web search"
-                  aria-pressed={webSearchEnabled}
-                  disabled={!extensionAccessEnabled || !isExtensionAccessLoaded}
-                  className={`grid size-7 place-items-center rounded-lg transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40 ${webSearchEnabled ? "bg-[#ffdc00]/[0.12] text-[#ffdc00]" : "text-[#a8a8b0] hover:text-white"}`}
-                >
-                  <Globe size={16} />
-                </button>
                 <span className="flex-1 truncate text-[11px] text-[#8e8e96]">
-                  {isSending
-                    ? "Generating response…"
-                    : webSearchEnabled
-                      ? "Web search enabled"
-                      : "Ready when you are"}
+                  {isSending ? "Generating response…" : "Ready when you are"}
                 </span>
                 <button
                   type="submit"
