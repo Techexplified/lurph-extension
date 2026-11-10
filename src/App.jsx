@@ -1433,7 +1433,24 @@ function MainChatPanel({ currentUser, onLogout }) {
       );
       return;
     }
+
+    // Every tool starts a fresh conversation instead of reusing the chat
+    // currently open (including a conversation opened from History).
+    setActiveSection("chat");
+    setIsHistoryOpen(false);
     setOpenedFromHistory(false);
+    setConversationId(null);
+    setMessages([]);
+    setAttachedFileName("");
+    setAttachedFileText("");
+    setImageAttachment(null);
+    setPdfAttachment(null);
+    setClearPdfAttachment(false);
+    setSelectedTextContext(null);
+    setClearSelectedTextContext(false);
+    setOpenConversationMenuId(null);
+    setRenamingConversationId(null);
+
     setPrompt(
       toolName === "Translate" || toolName === "Rewrite" ? "" : suggestedPrompt,
     );
