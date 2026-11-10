@@ -1182,6 +1182,7 @@ function MainChatPanel({ currentUser, onLogout }) {
   const [extensionAccessEnabled, setExtensionAccessEnabled] = useState(false);
   const [isExtensionAccessLoaded, setIsExtensionAccessLoaded] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [openedFromHistory, setOpenedFromHistory] = useState(false);
   const [activeSection, setActiveSection] = useState("chat");
   const [historySearch, setHistorySearch] = useState("");
   const [historyItems, setHistoryItems] = useState([]);
@@ -1326,6 +1327,7 @@ function MainChatPanel({ currentUser, onLogout }) {
       // the conversation that happened to be open in the side panel.
       setActiveSection("chat");
       setIsHistoryOpen(false);
+      setOpenedFromHistory(false);
       setConversationId(null);
       setMessages([]);
       setPrompt("");
@@ -1420,6 +1422,7 @@ function MainChatPanel({ currentUser, onLogout }) {
 
   const openSection = (section) => {
     setActiveSection(section);
+    if (section !== "chat") setOpenedFromHistory(false);
     setIsHistoryOpen(false);
     setIsModelMenuOpen(false);
     setIsMoreMenuOpen(false);
@@ -1432,6 +1435,7 @@ function MainChatPanel({ currentUser, onLogout }) {
       );
       return;
     }
+    setOpenedFromHistory(false);
     setPrompt(
       toolName === "Translate" || toolName === "Rewrite" ? "" : suggestedPrompt,
     );
@@ -1442,6 +1446,7 @@ function MainChatPanel({ currentUser, onLogout }) {
 
   const handleNewChat = () => {
     setActiveSection("chat");
+    setOpenedFromHistory(false);
     setConversationId(null);
     setMessages([]);
     setPrompt("");
@@ -1590,6 +1595,7 @@ function MainChatPanel({ currentUser, onLogout }) {
         rewriteTone: message.rewriteTone || "",
       }));
       setMessages(loadedMessages);
+      setOpenedFromHistory(true);
       if (conversation.lastModel) setModel(conversation.lastModel);
       if (conversation.pageTitle) setPageTitle(conversation.pageTitle);
       else if (conversation.pdfAttachment?.name)
@@ -2091,19 +2097,31 @@ function MainChatPanel({ currentUser, onLogout }) {
         </div>
       </header>
 
-      {activeSection === "chat" && activePromptTool && (
-        <div className="shrink-0 px-4 pb-2">
-          <button
-            type="button"
-            onClick={() => openSection("tools")}
-            title="Back to Tools"
-            className="flex h-8 max-w-full items-center gap-2 rounded-md px-1 text-left text-sm text-[#d7d7dc] transition hover:text-white"
-          >
-            <ArrowLeft size={17} className="shrink-0 text-[#b8b8c0]" />
-            <span className="truncate font-medium">{activePromptTool}</span>
-          </button>
-        </div>
-      )}
+      {activeSection === "chat" &&
+        !isHistoryOpen &&
+        (activePromptTool || openedFromHistory) && (
+          <div className="shrink-0 px-4 pb-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (openedFromHistory) {
+                  setIsHistoryOpen(true);
+                  setHistoryError("");
+                  setOpenConversationMenuId(null);
+                } else {
+                  openSection("tools");
+                }
+              }}
+              title={openedFromHistory ? "Back to History" : "Back to Tools"}
+              className="flex h-8 max-w-full items-center gap-2 rounded-md px-1 text-left text-sm text-[#d7d7dc] transition hover:text-white"
+            >
+              <ArrowLeft size={17} className="shrink-0 text-[#b8b8c0]" />
+              <span className="truncate font-medium">
+                {activePromptTool || "Back to History"}
+              </span>
+            </button>
+          </div>
+        )}
 
       {activeSection === "chat" &&
         !isHistoryOpen &&
