@@ -51,7 +51,6 @@ import {
   History,
   Plus,
   MoreHorizontal,
-  PanelRight,
   LogOut,
   Search,
   Pencil,
@@ -1155,7 +1154,7 @@ function MainChatPanel({ currentUser, onLogout }) {
     useState("Auto-detect");
   const [translateToLanguage, setTranslateToLanguage] = useState("English");
   const [rewriteTone, setRewriteTone] = useState("Professional");
-  const [pageTitle, setPageTitle] = useState("Current tab");
+  const [, setPageTitle] = useState("Current tab");
   const [attachedFileName, setAttachedFileName] = useState("");
   const [attachedFileText, setAttachedFileText] = useState("");
   const [imageAttachment, setImageAttachment] = useState(null);
@@ -2544,11 +2543,6 @@ function MainChatPanel({ currentUser, onLogout }) {
           </div>
 
           <div className="shrink-0 px-3 pb-2 pt-1">
-            <div className="mb-1.5 flex min-w-0 items-center gap-2 rounded-lg border border-white/[0.10] bg-[#171719] px-2.5 py-1.5 text-[11px] text-[#b8b8c0]">
-              <PanelRight size={14} className="shrink-0 text-[#b1b1b9]" />
-              <span className="min-w-0 flex-1 truncate">{pageTitle}</span>
-              <ChevronDown size={14} className="shrink-0 text-[#92929a]" />
-            </div>
             {selectedTextContext && (
               <div className="mb-1.5 rounded-xl border border-[#ffdc00]/25 bg-[#ffdc00]/[0.055] px-3 py-2.5">
                 <div className="mb-1 flex items-center gap-2">
