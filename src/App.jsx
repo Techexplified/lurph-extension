@@ -2236,7 +2236,7 @@ function MainChatPanel({ currentUser, onLogout }) {
         )}
 
       {isHistoryOpen ? (
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3">
+        <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-3">
           <div className="shrink-0 pb-3">
             <div className="relative w-full">
               <Search
