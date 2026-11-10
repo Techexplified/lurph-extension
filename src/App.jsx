@@ -402,17 +402,6 @@ function OnboardingScreen({
       <section className="ob-panel ob-final-panel mx-auto flex h-full min-h-0 w-full max-w-[1370px] flex-col overflow-hidden bg-[#080808] p-4 sm:p-5 lg:p-6">
         <OnboardingProgress step={3} />
         <div className="ob-final-hero mt-2 shrink-0 text-center">
-          <div className="relative mx-auto grid size-11 place-items-center rounded-xl bg-[#ffdc00] text-3xl font-black leading-none tracking-[-3px] text-[#171600] shadow-[0_0_30px_rgba(255,220,0,0.18)]">
-            <span>L</span>
-            <Sparkles
-              size={16}
-              className="absolute -left-4 -top-2 text-[#ffdc00]"
-            />
-            <Sparkles
-              size={16}
-              className="absolute -right-4 -top-1 text-[#ffdc00]"
-            />
-          </div>
           <h1 className="mt-2 text-[clamp(27px,4vh,42px)] font-bold tracking-tight">
             You’re all set!
           </h1>
