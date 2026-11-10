@@ -55,7 +55,6 @@ import {
   PanelRight,
   LogOut,
   Search,
-  SlidersHorizontal,
   Pencil,
   Trash2,
   X,
@@ -1188,7 +1187,6 @@ function MainChatPanel({ currentUser, onLogout }) {
   const [historyItems, setHistoryItems] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [historyError, setHistoryError] = useState("");
-  const [historySortNewest, setHistorySortNewest] = useState(true);
   const [openConversationMenuId, setOpenConversationMenuId] = useState(null);
   const [renamingConversationId, setRenamingConversationId] = useState(null);
   const [renameDraft, setRenameDraft] = useState("");
@@ -1947,14 +1945,12 @@ function MainChatPanel({ currentUser, onLogout }) {
   };
 
   const groupedHistory = (() => {
-    const sorted = [...historyItems].sort((a, b) => {
-      const difference =
+    const sorted = [...historyItems].sort(
+      (a, b) =>
         new Date(b.lastMessageAt || b.updatedAt).getTime() -
-        new Date(a.lastMessageAt || a.updatedAt).getTime();
-      return historySortNewest ? difference : -difference;
-    });
+        new Date(a.lastMessageAt || a.updatedAt).getTime(),
+    );
     const labels = ["Today", "Yesterday", "Last 7 days", "Older"];
-    if (!historySortNewest) labels.reverse();
     const groups = labels.map((label) => ({ label, items: [] }));
     for (const item of sorted) {
       const group = getConversationGroup(
@@ -2241,8 +2237,8 @@ function MainChatPanel({ currentUser, onLogout }) {
 
       {isHistoryOpen ? (
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3">
-          <div className="flex shrink-0 items-center gap-2 pb-3">
-            <div className="relative min-w-0 flex-1">
+          <div className="shrink-0 pb-3">
+            <div className="relative w-full">
               <Search
                 size={17}
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#85858c]"
@@ -2255,19 +2251,6 @@ function MainChatPanel({ currentUser, onLogout }) {
                 className="h-10 w-full rounded-xl border border-white/[0.12] bg-[#151517] pl-9 pr-3 text-sm text-[#f2f2f4] outline-none placeholder:text-[#898991] focus:border-[#ffdc00]/50"
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setHistorySortNewest((value) => !value)}
-              title={
-                historySortNewest ? "Sort oldest first" : "Sort newest first"
-              }
-              aria-label={
-                historySortNewest ? "Sort oldest first" : "Sort newest first"
-              }
-              className="grid size-10 shrink-0 place-items-center rounded-xl border border-white/[0.12] bg-[#151517] text-[#b8b8bf] transition hover:border-[#ffdc00]/35 hover:text-[#ffdc00]"
-            >
-              <SlidersHorizontal size={18} />
-            </button>
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
