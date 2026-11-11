@@ -2107,7 +2107,7 @@ function MainChatPanel({
                     >
                       {TRANSLATION_LANGUAGES.map((language) => (
                         <option key={language} value={language}>
-                          {language}
+                          {language === "Auto-detect" ? "Select" : language}
                         </option>
                       ))}
                     </select>
