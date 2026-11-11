@@ -523,6 +523,72 @@ const MAX_SUMMARIZE_PAGE_TEXT_CHARS = 60000;
 const MAX_ATTACHMENT_TEXT_CHARS = 20000;
 const MAX_SELECTED_TEXT_CHARS = 12000;
 const MAX_IMAGE_UPLOAD_BYTES = 2 * 1024 * 1024;
+const MAX_TEXT_ATTACHMENT_BYTES = 200 * 1024;
+const MAX_PDF_ATTACHMENT_BYTES = 3 * 1024 * 1024;
+const TEXT_FILE_EXTENSIONS = new Set([
+  "txt",
+  "md",
+  "markdown",
+  "csv",
+  "tsv",
+  "json",
+  "jsonl",
+  "xml",
+  "html",
+  "htm",
+  "css",
+  "scss",
+  "less",
+  "js",
+  "jsx",
+  "ts",
+  "tsx",
+  "mjs",
+  "cjs",
+  "py",
+  "java",
+  "c",
+  "h",
+  "cpp",
+  "hpp",
+  "cs",
+  "go",
+  "rs",
+  "php",
+  "rb",
+  "swift",
+  "kt",
+  "kts",
+  "dart",
+  "sql",
+  "sh",
+  "bash",
+  "zsh",
+  "ps1",
+  "bat",
+  "cmd",
+  "yaml",
+  "yml",
+  "toml",
+  "ini",
+  "cfg",
+  "conf",
+  "log",
+  "env",
+  "gitignore",
+  "dockerignore",
+  "dockerfile",
+]);
+const TEXT_FILE_MIME_TYPES = new Set([
+  "application/json",
+  "application/ld+json",
+  "application/xml",
+  "application/javascript",
+  "application/x-yaml",
+  "application/yaml",
+  "application/sql",
+  "application/toml",
+]);
 const IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
@@ -2003,29 +2069,76 @@ function MainChatPanel({
       return;
     }
 
-    const extension = file.name.split(".").pop()?.toLowerCase();
+    const extension = file.name.split(".").pop()?.toLowerCase() || "";
+    const mimeType = (file.type || "").toLowerCase();
     const isImage =
-      file.type.toLowerCase().startsWith("image/") ||
+      mimeType.startsWith("image/") ||
       ["jpg", "jpeg", "jfif", "pjpeg", "png", "webp", "gif"].includes(
         extension,
       );
+    const isPdf = mimeType === "application/pdf" || extension === "pdf";
+
     if (isImage) {
       await handleImageSelect(file);
       return;
     }
-    if (!["txt", "md", "csv", "json"].includes(extension)) {
+
+    // Main-chat PDFs use the same validated backend extraction endpoint as
+    // PDF Q&A, but remain attached to the current regular chat (no tool switch
+    // and no new conversation is created).
+    if (isPdf) {
+      if (file.size > MAX_PDF_ATTACHMENT_BYTES) {
+        setStatus("PDF uploads must be 3 MB or smaller.");
+        return;
+      }
+
+      setIsUploadingPdf(true);
+      setStatus("Extracting text from your PDF…");
+      try {
+        const extracted = await extractPdf(file);
+        setPdfAttachment(extracted);
+        setClearPdfAttachment(false);
+        setAttachedFileName("");
+        setAttachedFileText("");
+        setPageTitle(extracted.name || file.name);
+        setStatus(
+          extracted.truncated
+            ? `PDF attached (${extracted.pageCount || "unknown"} pages). The extracted text was shortened to fit the context limit.`
+            : `PDF attached successfully (${extracted.pageCount || "unknown"} pages). Ask a question to begin.`,
+        );
+      } catch (error) {
+        setStatus(
+          error.response?.data?.message ||
+            error.message ||
+            "Could not read this PDF. Please try another file.",
+        );
+      } finally {
+        setIsUploadingPdf(false);
+      }
+      return;
+    }
+
+    const isTextFile =
+      TEXT_FILE_EXTENSIONS.has(extension) ||
+      mimeType.startsWith("text/") ||
+      TEXT_FILE_MIME_TYPES.has(mimeType);
+    if (!isTextFile) {
       setStatus(
-        "Attach an image (JPEG, PNG, WebP, or GIF) or a TXT, MD, CSV, or JSON file.",
+        "Attach a PDF, image (JPEG, PNG, WebP, or GIF), or a supported text file.",
       );
       return;
     }
-    if (file.size > 200 * 1024) {
+    if (file.size > MAX_TEXT_ATTACHMENT_BYTES) {
       setStatus("Please attach a text file smaller than 200 KB.");
       return;
     }
 
     try {
       const text = (await file.text()).slice(0, MAX_ATTACHMENT_TEXT_CHARS);
+      if (!text.trim()) {
+        setStatus("This text file appears to be empty.");
+        return;
+      }
       setAttachedFileName(file.name);
       setAttachedFileText(text);
       setStatus("");
@@ -2815,13 +2928,13 @@ function MainChatPanel({
                   type="file"
                   className="hidden"
                   id="lurph-attachment"
-                  accept=".txt,.md,.csv,.json,image/*,text/plain,text/markdown,text/csv,application/json"
+                  accept=".pdf,application/pdf,.txt,.md,.markdown,.csv,.tsv,.json,.jsonl,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.java,.c,.h,.cpp,.hpp,.cs,.go,.rs,.php,.rb,.swift,.kt,.kts,.dart,.sql,.sh,.bash,.zsh,.ps1,.bat,.cmd,.yaml,.yml,.toml,.ini,.cfg,.conf,.log,.env,.gitignore,.dockerignore,.dockerfile,image/*,text/*,application/json,application/ld+json,application/xml,application/javascript,application/x-yaml,application/yaml,application/sql,application/toml"
                   onChange={handleAttach}
                   disabled={!extensionAccessEnabled || !isExtensionAccessLoaded}
                 />
                 <label
                   htmlFor="lurph-attachment"
-                  title="Attach an image or text file"
+                  title="Attach a PDF, image, or text file"
                   className={`grid size-7 place-items-center rounded-lg text-[#a8a8b0] transition ${extensionAccessEnabled && isExtensionAccessLoaded ? "cursor-pointer hover:bg-white/[0.06] hover:text-white" : "pointer-events-none cursor-not-allowed opacity-40"}`}
                 >
                   <Paperclip size={16} />
