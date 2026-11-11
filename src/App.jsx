@@ -1396,7 +1396,8 @@ function MainChatPanel({
       section === "tools" &&
       captureCurrentChat &&
       activeSection === "chat" &&
-      !isHistoryOpen
+      !isHistoryOpen &&
+      !activePromptTool
     ) {
       const hasCurrentChat =
         messages.length > 0 ||
@@ -1445,9 +1446,20 @@ function MainChatPanel({
     setIsMoreMenuOpen(false);
   };
 
-  // Returning from History or Settings only changes the visible section.
-  // The current conversation remains in component state and is not reloaded.
+  // All tab-level back buttons return to the main chat. If a regular chat
+  // was saved before opening a tool, restore it. Otherwise, leave tool-specific
+  // chat state behind and show the main chat home screen.
   const returnToMainChat = () => {
+    if (previousChatRef.current) {
+      restorePreviousChat();
+      return;
+    }
+
+    if (activePromptTool) {
+      handleNewChat();
+      return;
+    }
+
     setActiveSection("chat");
     setIsHistoryOpen(false);
     setIsModelMenuOpen(false);
@@ -2182,30 +2194,20 @@ function MainChatPanel({
             <button
               type="button"
               onClick={() => {
-                if (previousChatRef.current) {
-                  restorePreviousChat();
+                if (activePromptTool) {
+                  returnToMainChat();
                 } else if (openedFromHistory) {
                   setIsHistoryOpen(true);
                   setHistoryError("");
                   setOpenConversationMenuId(null);
-                } else {
-                  openSection("tools");
                 }
               }}
-              title={
-                previousChatRef.current
-                  ? "Back to chat"
-                  : openedFromHistory
-                    ? "Back to History"
-                    : "Back to Tools"
-              }
+              title={activePromptTool ? "Back to chat" : "Back to History"}
               className="flex h-8 max-w-full items-center gap-2 rounded-md px-1 text-left text-sm text-[#d7d7dc] transition hover:text-white"
             >
               <ArrowLeft size={17} className="shrink-0 text-[#b8b8c0]" />
               <span className="truncate font-medium">
-                {previousChatRef.current
-                  ? "Back to chat"
-                  : activePromptTool || "Back to History"}
+                {activePromptTool ? "Back to chat" : "Back to History"}
               </span>
             </button>
           </div>
