@@ -2557,9 +2557,7 @@ function MainChatPanel({ currentUser, onLogout }) {
                     onClick={() => {
                       setSelectedTextContext(null);
                       setClearSelectedTextContext(true);
-                      setStatus(
-                        "Selected text removed from this conversation context.",
-                      );
+                      setStatus("");
                     }}
                     title="Remove selected text"
                     aria-label="Remove selected text"
@@ -2598,9 +2596,7 @@ function MainChatPanel({ currentUser, onLogout }) {
                   type="button"
                   onClick={() => {
                     setImageAttachment(null);
-                    setStatus(
-                      "Image removed. It will no longer be included with your next message.",
-                    );
+                    setStatus("");
                   }}
                   title="Remove image"
                   aria-label="Remove image attachment"
