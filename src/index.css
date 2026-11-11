@@ -1,7 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   color: #f5f5f5;
   background: #080808;
   font-synthesis: none;
@@ -79,59 +86,159 @@ a {
 }
 
 /* Onboarding screens are designed to fit one normal browser viewport. */
-.ob-screen { isolation: isolate; }
-.ob-panel { position: relative; }
-.ob-feature-list { grid-template-rows: repeat(4, minmax(0, auto)); }
-.ob-feature-card { min-height: 0; }
-.ob-instruction-grid { grid-template-rows: minmax(0, 1fr); }
-.ob-instruction-card { min-height: 0; }
-.ob-mock-window { min-width: 0; }
+.ob-screen {
+  isolation: isolate;
+}
+.ob-panel {
+  position: relative;
+}
+.ob-feature-list {
+  grid-template-rows: repeat(4, minmax(0, auto));
+}
+.ob-feature-card {
+  min-height: 0;
+}
+.ob-instruction-grid {
+  grid-template-rows: minmax(0, 1fr);
+}
+.ob-instruction-card {
+  min-height: 0;
+}
+.ob-mock-window {
+  min-width: 0;
+}
 
 @media (max-height: 760px) {
-  .ob-screen { padding: 8px !important; }
-  .ob-panel { padding: 12px !important; }
-  .ob-progress { margin-top: 7px !important; }
-  .ob-intro { margin-top: 8px !important; }
-  .ob-feature-list { margin-top: 9px !important; gap: 6px !important; }
-  .ob-feature-card { padding: 7px 9px !important; gap: 9px !important; }
-  .ob-feature-card > div:first-child { width: 36px; height: 36px; }
-  .ob-feature-card svg { width: 20px; height: 20px; }
-  .ob-permission-list { margin-top: 8px !important; gap: 5px !important; }
-  .ob-permission-card { padding: 7px 9px !important; gap: 9px !important; }
-  .ob-permission-card > span { width: 28px; height: 28px; }
-  .ob-warning { padding: 7px 9px !important; margin-top: 6px !important; }
-  .ob-warning ul { margin-top: 3px !important; gap: 2px !important; }
-  .ob-footer { padding-top: 7px !important; }
-  .ob-final-hero { margin-top: 5px !important; }
-  .ob-final-hero > div:first-child { width: 36px; height: 36px; font-size: 26px; }
-  .ob-instruction-grid { margin-top: 8px !important; gap: 8px !important; }
-  .ob-instruction-card { padding: 9px !important; }
-  .ob-mock-window { margin-top: 8px !important; }
-  .ob-primary-button { min-height: 38px !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+  .ob-screen {
+    padding: 8px !important;
+  }
+  .ob-panel {
+    padding: 12px !important;
+  }
+  .ob-progress {
+    margin-top: 7px !important;
+  }
+  .ob-intro {
+    margin-top: 8px !important;
+  }
+  .ob-feature-list {
+    margin-top: 9px !important;
+    gap: 6px !important;
+  }
+  .ob-feature-card {
+    padding: 7px 9px !important;
+    gap: 9px !important;
+  }
+  .ob-feature-card > div:first-child {
+    width: 36px;
+    height: 36px;
+  }
+  .ob-feature-card svg {
+    width: 20px;
+    height: 20px;
+  }
+  .ob-permission-list {
+    margin-top: 8px !important;
+    gap: 5px !important;
+  }
+  .ob-permission-card {
+    padding: 7px 9px !important;
+    gap: 9px !important;
+  }
+  .ob-permission-card > span {
+    width: 28px;
+    height: 28px;
+  }
+  .ob-warning {
+    padding: 7px 9px !important;
+    margin-top: 6px !important;
+  }
+  .ob-warning ul {
+    margin-top: 3px !important;
+    gap: 2px !important;
+  }
+  .ob-footer {
+    padding-top: 7px !important;
+  }
+  .ob-final-hero {
+    margin-top: 5px !important;
+  }
+  .ob-final-hero > div:first-child {
+    width: 36px;
+    height: 36px;
+    font-size: 26px;
+  }
+  .ob-instruction-grid {
+    margin-top: 8px !important;
+    gap: 8px !important;
+  }
+  .ob-instruction-card {
+    padding: 9px !important;
+  }
+  .ob-mock-window {
+    margin-top: 8px !important;
+  }
+  .ob-primary-button {
+    min-height: 38px !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
 }
 
 @media (max-height: 650px) {
-  .ob-screen { padding: 5px !important; }
-  .ob-panel { padding: 8px !important; }
-  .ob-intro p { line-height: 1.25 !important; }
-  .ob-feature-card p, .ob-permission-card p { line-height: 1.25 !important; }
-  .ob-feature-card { padding: 5px 7px !important; }
-  .ob-permission-card { padding: 5px 7px !important; }
-  .ob-warning { padding: 5px 7px !important; }
-  .ob-final-hero > p:last-child { margin-top: 4px !important; }
-  .ob-instruction-grid { gap: 6px !important; }
-  .ob-instruction-card { padding: 7px !important; }
-  .ob-instruction-card p { font-size: 11px !important; }
-  .ob-mock-window { margin-top: 5px !important; }
+  .ob-screen {
+    padding: 5px !important;
+  }
+  .ob-panel {
+    padding: 8px !important;
+  }
+  .ob-intro p {
+    line-height: 1.25 !important;
+  }
+  .ob-feature-card p,
+  .ob-permission-card p {
+    line-height: 1.25 !important;
+  }
+  .ob-feature-card {
+    padding: 5px 7px !important;
+  }
+  .ob-permission-card {
+    padding: 5px 7px !important;
+  }
+  .ob-warning {
+    padding: 5px 7px !important;
+  }
+  .ob-final-hero > p:last-child {
+    margin-top: 4px !important;
+  }
+  .ob-instruction-grid {
+    gap: 6px !important;
+  }
+  .ob-instruction-card {
+    padding: 7px !important;
+  }
+  .ob-instruction-card p {
+    font-size: 11px !important;
+  }
+  .ob-mock-window {
+    margin-top: 5px !important;
+  }
 }
 
 @media (max-width: 900px) {
-  .ob-final-panel { overflow-y: auto; }
-  .ob-instruction-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .ob-instruction-card h2 { font-size: 12px; }
-  .ob-instruction-card p { font-size: 10px; }
+  .ob-final-panel {
+    overflow-y: auto;
+  }
+  .ob-instruction-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ob-instruction-card h2 {
+    font-size: 12px;
+  }
+  .ob-instruction-card p {
+    font-size: 10px;
+  }
 }
-
 
 /* The side-panel login/register page must own a viewport-sized scroll container.
    The document body itself is intentionally locked to prevent double scrolling. */
@@ -158,4 +265,207 @@ a {
   border: 2px solid #080808;
   border-radius: 999px;
   background: #454545;
+}
+
+/* --------------------------------------------------------------------------
+   Lurph appearance themes
+   The app's existing Tailwind classes define the dark palette. These scoped
+   overrides provide a light palette without changing component behavior.
+   -------------------------------------------------------------------------- */
+:root[data-lurph-theme="light"] {
+  color-scheme: light;
+  color: #1d2530;
+  background: #f7f8fa;
+}
+
+:root[data-lurph-theme="light"] body,
+:root[data-lurph-theme="light"] #root {
+  color: #1d2530;
+  background: #f7f8fa;
+}
+
+:root[data-lurph-theme="light"] * {
+  scrollbar-color: #c3c9d2 #eef1f5;
+}
+
+:root[data-lurph-theme="light"] ::-webkit-scrollbar-track {
+  background: #eef1f5;
+}
+
+:root[data-lurph-theme="light"] ::-webkit-scrollbar-thumb {
+  border-color: #eef1f5;
+  background: #c3c9d2;
+}
+
+:root[data-lurph-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: #aab3bf;
+}
+
+/* Main page and large panel backgrounds. */
+:root[data-lurph-theme="light"] [class~="bg-[#080808]"],
+:root[data-lurph-theme="light"] [class~="bg-[#09090a]"],
+:root[data-lurph-theme="light"] [class~="bg-[#0a0a0b]"],
+:root[data-lurph-theme="light"] [class~="bg-[#0d0d0d]"],
+:root[data-lurph-theme="light"] [class~="bg-[#0e0e10]"],
+:root[data-lurph-theme="light"] [class~="bg-[#101018]"],
+:root[data-lurph-theme="light"] [class~="bg-[#111113]"],
+:root[data-lurph-theme="light"] [class~="bg-[#121214]"],
+:root[data-lurph-theme="light"] [class~="bg-[#121215]"],
+:root[data-lurph-theme="light"] [class~="bg-[#141416]"],
+:root[data-lurph-theme="light"] [class~="bg-[#151517]"],
+:root[data-lurph-theme="light"] [class~="bg-[#171719]"],
+:root[data-lurph-theme="light"] [class~="bg-[#171717]"],
+:root[data-lurph-theme="light"] [class~="bg-[#19191c]"],
+:root[data-lurph-theme="light"] [class~="bg-[#1b1b1d]"],
+:root[data-lurph-theme="light"] [class~="bg-[#1c1c1f]"],
+:root[data-lurph-theme="light"] [class~="bg-[#1c1c20]"] {
+  background-color: #ffffff !important;
+}
+
+/* Inputs, nested cards, dropdowns, and secondary surfaces. */
+:root[data-lurph-theme="light"] [class~="bg-[#1b222c]"],
+:root[data-lurph-theme="light"] [class~="bg-[#1b1b1e]"],
+:root[data-lurph-theme="light"] [class~="bg-[#1a1a1d]"],
+:root[data-lurph-theme="light"] [class~="bg-[#252b50]"],
+:root[data-lurph-theme="light"] [class~="bg-[#303030]"],
+:root[data-lurph-theme="light"] [class~="bg-[#0d0d32]"],
+:root[data-lurph-theme="light"] [class~="bg-[#171719]"],
+:root[data-lurph-theme="light"] [class~="bg-[#1a1a1d]"],
+:root[data-lurph-theme="light"] [class~="bg-[#1b1b1b]"],
+:root[data-lurph-theme="light"] [class~="bg-[#1c1c1f]"],
+:root[data-lurph-theme="light"] [class~="bg-[#1c1c20]"],
+:root[data-lurph-theme="light"] [class~="bg-[#19191c]"] {
+  background-color: #f1f3f6 !important;
+}
+
+:root[data-lurph-theme="light"] [class~="bg-white/[0.025]"],
+:root[data-lurph-theme="light"] [class~="bg-white/[0.035]"],
+:root[data-lurph-theme="light"] [class~="bg-white/[0.06]"],
+:root[data-lurph-theme="light"] [class~="bg-white/[0.07]"],
+:root[data-lurph-theme="light"] [class~="bg-white/[0.08]"] {
+  background-color: rgba(28, 39, 54, 0.045) !important;
+}
+
+:root[data-lurph-theme="light"]
+  [class~="bg-gradient-to-br"][class~="from-[#19191b]"][class~="to-[#111113]"],
+:root[data-lurph-theme="light"]
+  [class~="bg-gradient-to-br"][class~="from-[#171b22]"][class~="to-[#111318]"] {
+  background-image: linear-gradient(135deg, #ffffff, #f1f3f6) !important;
+}
+
+/* Light-mode text colors. Brand yellow and validation colors remain intact. */
+:root[data-lurph-theme="light"] [class~="text-white"],
+:root[data-lurph-theme="light"] [class~="text-[#f7f7f7]"],
+:root[data-lurph-theme="light"] [class~="text-[#f8f8f8]"],
+:root[data-lurph-theme="light"] [class~="text-[#f5f5f5]"],
+:root[data-lurph-theme="light"] [class~="text-[#f5f5f7]"],
+:root[data-lurph-theme="light"] [class~="text-[#f5f2dc]"],
+:root[data-lurph-theme="light"] [class~="text-[#f4f4f4]"],
+:root[data-lurph-theme="light"] [class~="text-[#f4f4f6]"],
+:root[data-lurph-theme="light"] [class~="text-[#f4f4f7]"],
+:root[data-lurph-theme="light"] [class~="text-[#f3f3f3]"],
+:root[data-lurph-theme="light"] [class~="text-[#f2f2f4]"],
+:root[data-lurph-theme="light"] [class~="text-[#f0f1f4]"],
+:root[data-lurph-theme="light"] [class~="text-[#e8e8e8]"],
+:root[data-lurph-theme="light"] [class~="text-[#e6e6e9]"],
+:root[data-lurph-theme="light"] [class~="text-[#e7e7eb]"],
+:root[data-lurph-theme="light"] [class~="text-[#e8e8e8]"],
+:root[data-lurph-theme="light"] [class~="text-[#dedee2]"],
+:root[data-lurph-theme="light"] [class~="text-[#d7d7dc]"],
+:root[data-lurph-theme="light"] [class~="text-[#d9d9de]"],
+:root[data-lurph-theme="light"] [class~="text-[#d4d4d9]"],
+:root[data-lurph-theme="light"] [class~="text-[#d0d0d4]"],
+:root[data-lurph-theme="light"] [class~="text-[#c5c5c8]"],
+:root[data-lurph-theme="light"] [class~="text-[#c5c5ca]"],
+:root[data-lurph-theme="light"] [class~="text-[#c5c5ce]"],
+:root[data-lurph-theme="light"] [class~="text-[#c8cbd2]"],
+:root[data-lurph-theme="light"] [class~="text-[#c7c7cc]"],
+:root[data-lurph-theme="light"] [class~="text-[#bcbcbc]"],
+:root[data-lurph-theme="light"] [class~="text-[#bcbcc2]"],
+:root[data-lurph-theme="light"] [class~="text-[#b8b8c0]"],
+:root[data-lurph-theme="light"] [class~="text-[#b9c0cb]"],
+:root[data-lurph-theme="light"] [class~="text-[#b4b4b8]"] {
+  color: #1d2530 !important;
+}
+
+:root[data-lurph-theme="light"] [class~="text-[#aaa9ad]"],
+:root[data-lurph-theme="light"] [class~="text-[#a9a9ae]"],
+:root[data-lurph-theme="light"] [class~="text-[#a4a4ac]"],
+:root[data-lurph-theme="light"] [class~="text-[#a4a4aa]"],
+:root[data-lurph-theme="light"] [class~="text-[#a1a1a1]"],
+:root[data-lurph-theme="light"] [class~="text-[#a0a0a0]"],
+:root[data-lurph-theme="light"] [class~="text-[#9d9da5]"],
+:root[data-lurph-theme="light"] [class~="text-[#9b9ba3]"],
+:root[data-lurph-theme="light"] [class~="text-[#9999a1]"],
+:root[data-lurph-theme="light"] [class~="text-[#96969d]"],
+:root[data-lurph-theme="light"] [class~="text-[#92929a]"],
+:root[data-lurph-theme="light"] [class~="text-[#98989f]"],
+:root[data-lurph-theme="light"] [class~="text-[#a8a8ae]"],
+:root[data-lurph-theme="light"] [class~="text-[#a8a8b0]"],
+:root[data-lurph-theme="light"] [class~="text-[#a5a5ad]"],
+:root[data-lurph-theme="light"] [class~="text-[#aaa]"] {
+  color: #5e6876 !important;
+}
+
+:root[data-lurph-theme="light"] [class~="text-[#85858d]"],
+:root[data-lurph-theme="light"] [class~="text-[#85858c]"],
+:root[data-lurph-theme="light"] [class~="text-[#888890]"],
+:root[data-lurph-theme="light"] [class~="text-[#8d8d95]"],
+:root[data-lurph-theme="light"] [class~="text-[#8e8e96]"],
+:root[data-lurph-theme="light"] [class~="text-[#8f8f95]"],
+:root[data-lurph-theme="light"] [class~="text-[#898991]"],
+:root[data-lurph-theme="light"] [class~="text-[#777780]"],
+:root[data-lurph-theme="light"] [class~="text-[#777]"],
+:root[data-lurph-theme="light"] [class~="text-[#696970]"] {
+  color: #737e8c !important;
+}
+
+:root[data-lurph-theme="light"] [class~="text-[#f0d94b]"],
+:root[data-lurph-theme="light"] [class~="text-[#ded29a]"],
+:root[data-lurph-theme="light"] [class~="text-[#d9d2a2]"],
+:root[data-lurph-theme="light"] [class~="text-[#c8c2a2]"],
+:root[data-lurph-theme="light"] [class~="text-[#b6a75f]"],
+:root[data-lurph-theme="light"] [class~="text-[#b6b1a0]"],
+:root[data-lurph-theme="light"] [class~="text-[#f3d66b]"] {
+  color: #806600 !important;
+}
+
+/* Borders and form controls. */
+:root[data-lurph-theme="light"] [class~="border-white/[0.05]"],
+:root[data-lurph-theme="light"] [class~="border-white/[0.06]"],
+:root[data-lurph-theme="light"] [class~="border-white/[0.07]"],
+:root[data-lurph-theme="light"] [class~="border-white/[0.08]"],
+:root[data-lurph-theme="light"] [class~="border-white/[0.09]"],
+:root[data-lurph-theme="light"] [class~="border-white/[0.10]"],
+:root[data-lurph-theme="light"] [class~="border-white/[0.12]"],
+:root[data-lurph-theme="light"] [class~="border-white/[0.16]"],
+:root[data-lurph-theme="light"] [class~="border-white/[0.23]"],
+:root[data-lurph-theme="light"] [class~="border-[#2c2c2c]"],
+:root[data-lurph-theme="light"] [class~="border-[#292929]"],
+:root[data-lurph-theme="light"] [class~="border-[#525252]"] {
+  border-color: #d9dee6 !important;
+}
+
+:root[data-lurph-theme="light"]
+  [class~="placeholder:text-[#a0a0a0]"]::placeholder,
+:root[data-lurph-theme="light"]
+  [class~="placeholder:text-[#898991]"]::placeholder,
+:root[data-lurph-theme="light"]
+  [class~="placeholder:text-[#85858d]"]::placeholder {
+  color: #7b8593 !important;
+}
+
+:root[data-lurph-theme="light"] .auth-scroll-container {
+  scrollbar-color: #c3c9d2 #eef1f5;
+}
+
+:root[data-lurph-theme="light"]
+  .auth-scroll-container::-webkit-scrollbar-track {
+  background: #eef1f5;
+}
+
+:root[data-lurph-theme="light"]
+  .auth-scroll-container::-webkit-scrollbar-thumb {
+  border-color: #eef1f5;
+  background: #c3c9d2;
 }

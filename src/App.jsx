@@ -2,12 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { clearTokens, getTokens, setTokens } from "./lib/tokenStorage.js";
 import {
   EXTENSION_ACCESS_STORAGE_KEY,
-  PERMISSION_LEVEL_STORAGE_KEY,
-  DEFAULT_PERMISSION_LEVEL,
   ALL_SITES_ORIGIN,
   canReadWebsiteContent,
   hasAllSitesHostPermission,
-  normalizePermissionLevel,
 } from "./lib/extensionSettings.js";
 import {
   getCurrentUser,
@@ -63,6 +60,9 @@ import {
   ChevronRight,
   PenLine,
   Shield,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 
 const features = [
@@ -118,6 +118,12 @@ const labelClasses =
   "flex flex-col gap-2 text-[13px] font-medium text-[#bcbcbc]";
 
 const ONBOARDING_STORAGE_KEY = "lurph_onboarding_completed";
+const THEME_PREFERENCE_STORAGE_KEY = "lurph_theme_preference";
+const THEME_OPTIONS = ["dark", "light", "system"];
+
+function normalizeThemePreference(value) {
+  return THEME_OPTIONS.includes(value) ? value : "system";
+}
 
 async function readOnboardingCompleted() {
   if (globalThis.chrome?.storage?.local) {
@@ -860,11 +866,8 @@ function ToolsView({
   );
 }
 
-function SettingsView() {
+function SettingsView({ themePreference, onThemeChange }) {
   const [extensionAccess, setExtensionAccess] = useState(false);
-  const [permissionLevel, setPermissionLevel] = useState(
-    DEFAULT_PERMISSION_LEVEL,
-  );
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isUpdatingAccess, setIsUpdatingAccess] = useState(false);
   const [settingsNotice, setSettingsNotice] = useState("");
@@ -883,10 +886,7 @@ function SettingsView() {
     let active = true;
     const loadSettings = async () => {
       try {
-        const stored = await storage.get([
-          EXTENSION_ACCESS_STORAGE_KEY,
-          PERMISSION_LEVEL_STORAGE_KEY,
-        ]);
+        const stored = await storage.get(EXTENSION_ACCESS_STORAGE_KEY);
         const chromePermissionGranted = await hasAllSitesHostPermission();
         const hasSavedAccessSetting =
           typeof stored[EXTENSION_ACCESS_STORAGE_KEY] === "boolean";
@@ -895,23 +895,15 @@ function SettingsView() {
         const shouldEnableAccess = hasSavedAccessSetting
           ? stored[EXTENSION_ACCESS_STORAGE_KEY] && chromePermissionGranted
           : chromePermissionGranted;
-        const nextPermissionLevel = normalizePermissionLevel(
-          stored[PERMISSION_LEVEL_STORAGE_KEY],
-        );
 
-        if (active) {
-          setExtensionAccess(shouldEnableAccess);
-          setPermissionLevel(nextPermissionLevel);
-        }
+        if (active) setExtensionAccess(shouldEnableAccess);
 
         if (
           !hasSavedAccessSetting ||
-          stored[EXTENSION_ACCESS_STORAGE_KEY] !== shouldEnableAccess ||
-          stored[PERMISSION_LEVEL_STORAGE_KEY] !== nextPermissionLevel
+          stored[EXTENSION_ACCESS_STORAGE_KEY] !== shouldEnableAccess
         ) {
           await storage.set({
             [EXTENSION_ACCESS_STORAGE_KEY]: shouldEnableAccess,
-            [PERMISSION_LEVEL_STORAGE_KEY]: nextPermissionLevel,
           });
         }
       } catch (error) {
@@ -932,13 +924,6 @@ function SettingsView() {
       if (changes[EXTENSION_ACCESS_STORAGE_KEY]) {
         setExtensionAccess(
           changes[EXTENSION_ACCESS_STORAGE_KEY].newValue === true,
-        );
-      }
-      if (changes[PERMISSION_LEVEL_STORAGE_KEY]) {
-        setPermissionLevel(
-          normalizePermissionLevel(
-            changes[PERMISSION_LEVEL_STORAGE_KEY].newValue,
-          ),
         );
       }
     };
@@ -1029,49 +1014,20 @@ function SettingsView() {
     }
   };
 
-  const handlePermissionLevelChange = async (level) => {
-    if (isLoadingSettings || permissionLevel === level) return;
-    setPermissionLevel(level);
-    setSettingsNotice("");
-    try {
-      await globalThis.chrome?.storage?.local?.set({
-        [PERMISSION_LEVEL_STORAGE_KEY]: level,
-      });
-    } catch (error) {
-      setSettingsNotice(
-        error?.message || "Could not save the permission level.",
-      );
-    }
-  };
-
-  const permissionOptions = [
-    {
-      name: "Read content",
-      value: "read",
-      detail: "Allows Lurph to read and understand the content on the page.",
-    },
-    {
-      name: "Create content",
-      value: "create",
-      detail:
-        "Allows Lurph to read and create content (e.g., fill forms, write, edit).",
-    },
-    {
-      name: "Full access",
-      value: "full",
-      detail:
-        "Allows Lurph to read, create, and interact with the site (where supported).",
-    },
+  const themeOptions = [
+    { value: "dark", label: "Dark", Icon: Moon },
+    { value: "light", label: "Light", Icon: Sun },
+    { value: "system", label: "System", Icon: Monitor },
   ];
 
   return (
     <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-1">
       <div className="mb-3 px-1">
         <h1 className="text-lg font-semibold tracking-tight">
-          Settings &amp; Permissions
+          Settings &amp; Appearance
         </h1>
         <p className="mt-1 text-[11px] leading-[1.5] text-[#a4a4ac]">
-          Control what Lurph can access and how it works on websites you visit.
+          Manage website access and customize how Lurph looks.
         </p>
       </div>
 
@@ -1097,39 +1053,35 @@ function SettingsView() {
         </div>
 
         <div className="rounded-xl border border-white/[0.10] bg-gradient-to-br from-[#19191b] to-[#111113] p-3">
-          <h2 className="text-xs font-semibold">Permission Levels</h2>
-          <p className="mt-1 text-[10px] text-[#9d9da5]">
-            Choose what Lurph can do on websites.
-          </p>
-          <div className="mt-2.5 space-y-1.5">
-            {permissionOptions.map(({ name, value, detail }) => (
-              <button
-                key={value}
-                type="button"
-                disabled={isLoadingSettings}
-                onClick={() => handlePermissionLevelChange(value)}
-                aria-pressed={permissionLevel === value}
-                className={`flex w-full items-start gap-2 rounded-lg border p-2.5 text-left transition disabled:cursor-wait disabled:opacity-60 ${permissionLevel === value ? "border-[#ffdc00]/80 bg-[#ffdc00]/[0.055]" : "border-white/[0.08] bg-[#111113] hover:border-white/[0.16]"}`}
-              >
-                <span
-                  className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border ${permissionLevel === value ? "border-[#ffdc00] bg-[#ffdc00]" : "border-[#77777e]"}`}
+          <div className="mb-2.5">
+            <h2 className="text-xs font-semibold">Appearance</h2>
+            <p className="mt-1 text-[10px] text-[#9d9da5]">
+              Choose your preferred theme.
+            </p>
+          </div>
+          <div
+            className="grid grid-cols-3 gap-2"
+            role="group"
+            aria-label="Theme preference"
+          >
+            {themeOptions.map(({ value, label, Icon }) => {
+              const selected = themePreference === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => onThemeChange(value)}
+                  aria-pressed={selected}
+                  className={`flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg border px-2 py-3 text-[10px] font-medium transition ${selected ? "border-[#ffdc00]/80 bg-[#ffdc00]/[0.07] text-[#ffdc00]" : "border-white/[0.08] bg-[#111113] text-[#b8b8c0] hover:border-white/[0.18] hover:text-white"}`}
                 >
-                  {permissionLevel === value && (
-                    <span className="size-1.5 rounded-full bg-black" />
-                  )}
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[10px] font-semibold">
-                    {name}
-                  </span>
-                  <span className="mt-1 block text-[9px] leading-[1.45] text-[#9b9ba3]">
-                    {detail}
-                  </span>
-                </span>
-              </button>
-            ))}
+                  <Icon size={18} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
+
         {settingsNotice && (
           <p
             className="px-1 text-[10px] leading-4 text-[#c8c2a2]"
@@ -1144,7 +1096,12 @@ function SettingsView() {
   );
 }
 
-function MainChatPanel({ currentUser, onLogout }) {
+function MainChatPanel({
+  currentUser,
+  onLogout,
+  themePreference,
+  onThemeChange,
+}) {
   const [model, setModel] = useState("gpt-4o");
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
@@ -2441,7 +2398,10 @@ function MainChatPanel({ currentUser, onLogout }) {
           }
         />
       ) : activeSection === "settings" ? (
-        <SettingsView />
+        <SettingsView
+          themePreference={themePreference}
+          onThemeChange={onThemeChange}
+        />
       ) : (
         <>
           <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
@@ -2756,6 +2716,91 @@ function App() {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [websiteAccessGranted, setWebsiteAccessGranted] = useState(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [themePreference, setThemePreference] = useState("system");
+
+  // Restore the saved theme preference and keep it synchronized across
+  // extension views. System mode follows the operating-system appearance.
+  useEffect(() => {
+    let active = true;
+    const chromeApi = globalThis.chrome;
+
+    const loadThemePreference = async () => {
+      try {
+        if (chromeApi?.storage?.local) {
+          const stored = await chromeApi.storage.local.get(
+            THEME_PREFERENCE_STORAGE_KEY,
+          );
+          if (active) {
+            setThemePreference(
+              normalizeThemePreference(stored[THEME_PREFERENCE_STORAGE_KEY]),
+            );
+          }
+        } else {
+          const saved = localStorage.getItem(THEME_PREFERENCE_STORAGE_KEY);
+          if (active) setThemePreference(normalizeThemePreference(saved));
+        }
+      } catch (error) {
+        console.warn("Could not restore Lurph theme preference:", error);
+      }
+    };
+
+    loadThemePreference();
+
+    const handleStorageChange = (changes, areaName) => {
+      if (areaName !== "local" || !changes[THEME_PREFERENCE_STORAGE_KEY])
+        return;
+      setThemePreference(
+        normalizeThemePreference(
+          changes[THEME_PREFERENCE_STORAGE_KEY].newValue,
+        ),
+      );
+    };
+
+    chromeApi?.storage?.onChanged?.addListener(handleStorageChange);
+    return () => {
+      active = false;
+      chromeApi?.storage?.onChanged?.removeListener(handleStorageChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const mediaQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
+
+    const applyTheme = () => {
+      const resolvedTheme =
+        themePreference === "system"
+          ? mediaQuery?.matches
+            ? "dark"
+            : "light"
+          : themePreference;
+      root.dataset.lurphTheme = resolvedTheme;
+      root.dataset.lurphThemePreference = themePreference;
+      root.style.colorScheme = resolvedTheme;
+    };
+
+    applyTheme();
+    if (themePreference !== "system" || !mediaQuery) return undefined;
+
+    mediaQuery.addEventListener?.("change", applyTheme);
+    return () => mediaQuery.removeEventListener?.("change", applyTheme);
+  }, [themePreference]);
+
+  const handleThemeChange = async (nextTheme) => {
+    const normalizedTheme = normalizeThemePreference(nextTheme);
+    setThemePreference(normalizedTheme);
+    try {
+      if (globalThis.chrome?.storage?.local) {
+        await chrome.storage.local.set({
+          [THEME_PREFERENCE_STORAGE_KEY]: normalizedTheme,
+        });
+      } else {
+        localStorage.setItem(THEME_PREFERENCE_STORAGE_KEY, normalizedTheme);
+      }
+    } catch (error) {
+      console.error("Could not save Lurph theme preference:", error);
+    }
+  };
 
   const isSignup = mode === "signup";
   const isAuthBusy = isSubmitting || isGoogleSubmitting;
@@ -2910,7 +2955,6 @@ function App() {
       globalThis.chrome?.storage?.local
         ?.set({
           [EXTENSION_ACCESS_STORAGE_KEY]: false,
-          [PERMISSION_LEVEL_STORAGE_KEY]: DEFAULT_PERMISSION_LEVEL,
         })
         .catch(() => {});
       setOnboardingStep(3);
@@ -2923,7 +2967,6 @@ function App() {
       try {
         await chrome.storage.local.set({
           [EXTENSION_ACCESS_STORAGE_KEY]: websiteAccessEnabled,
-          [PERMISSION_LEVEL_STORAGE_KEY]: DEFAULT_PERMISSION_LEVEL,
         });
       } catch (error) {
         console.error("Could not save website access settings:", error);
@@ -2966,7 +3009,14 @@ function App() {
   }
 
   if (currentUser) {
-    return <MainChatPanel currentUser={currentUser} onLogout={handleLogout} />;
+    return (
+      <MainChatPanel
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        themePreference={themePreference}
+        onThemeChange={handleThemeChange}
+      />
+    );
   }
 
   return (
