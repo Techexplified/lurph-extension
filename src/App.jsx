@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { clearTokens, getTokens, setTokens } from "./lib/tokenStorage.js";
 import {
   EXTENSION_ACCESS_STORAGE_KEY,
@@ -2478,8 +2480,20 @@ function MainChatPanel({
                         {getToolMessageLabel(message) || "Lurph"}
                       </p>
                     )}
-                    <div className="whitespace-pre-wrap break-words">
-                      {message.content}
+                    <div
+                      className={
+                        message.role === "assistant"
+                          ? "markdown-content break-words"
+                          : "whitespace-pre-wrap break-words"
+                      }
+                    >
+                      {message.role === "assistant" ? (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml>
+                          {String(message.content ?? "")}
+                        </ReactMarkdown>
+                      ) : (
+                        message.content
+                      )}
                     </div>
                   </div>
                 ))}

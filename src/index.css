@@ -516,3 +516,189 @@ a {
 :root[data-lurph-theme="light"] .theme-option[aria-pressed="true"] svg {
   color: #755900 !important;
 }
+
+/* --------------------------------------------------------------------------
+   Assistant Markdown rendering
+   -------------------------------------------------------------------------- */
+.markdown-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+
+.markdown-content > :first-child {
+  margin-top: 0;
+}
+
+.markdown-content > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content p {
+  margin: 0 0 0.7rem;
+  line-height: 1.65;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin: 1rem 0 0.45rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.markdown-content h1 {
+  font-size: 1.3em;
+}
+.markdown-content h2 {
+  font-size: 1.2em;
+}
+.markdown-content h3 {
+  font-size: 1.1em;
+}
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  font-size: 1em;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 0.55rem 0 0.8rem;
+  padding-left: 1.45rem;
+}
+
+.markdown-content ul {
+  list-style: disc;
+}
+.markdown-content ol {
+  list-style: decimal;
+}
+.markdown-content li {
+  margin: 0.25rem 0;
+  padding-left: 0.12rem;
+}
+.markdown-content li > p {
+  margin: 0.2rem 0;
+}
+.markdown-content li > ul,
+.markdown-content li > ol {
+  margin: 0.3rem 0;
+}
+.markdown-content strong {
+  font-weight: 700;
+}
+.markdown-content em {
+  font-style: italic;
+}
+
+.markdown-content blockquote {
+  margin: 0.8rem 0;
+  padding: 0.15rem 0 0.15rem 0.8rem;
+  border-left: 3px solid #ffdc00;
+  color: #bfc0c8;
+}
+
+.markdown-content a {
+  color: #f0cf35;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+.markdown-content hr {
+  margin: 0.9rem 0;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.markdown-content :not(pre) > code {
+  padding: 0.12rem 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.35rem;
+  background: rgba(255, 255, 255, 0.07);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.88em;
+  overflow-wrap: anywhere;
+}
+
+.markdown-content pre {
+  max-width: 100%;
+  margin: 0.8rem 0;
+  padding: 0.75rem;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.65rem;
+  background: #0c0e12;
+  color: #e8eaf0;
+  line-height: 1.5;
+}
+
+.markdown-content pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.88em;
+  white-space: pre;
+}
+
+.markdown-content table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 0.8rem 0;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.92em;
+}
+
+.markdown-content th,
+.markdown-content td {
+  padding: 0.4rem 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown-content th {
+  background: rgba(255, 255, 255, 0.07);
+  font-weight: 700;
+}
+
+:root[data-lurph-theme="light"] .markdown-content blockquote {
+  color: #5e6876;
+}
+
+:root[data-lurph-theme="light"] .markdown-content a {
+  color: #755900;
+}
+
+:root[data-lurph-theme="light"] .markdown-content hr {
+  border-top-color: #d9dee6;
+}
+
+:root[data-lurph-theme="light"] .markdown-content :not(pre) > code {
+  border-color: #d9dee6;
+  background: #eef1f5;
+  color: #263244;
+}
+
+:root[data-lurph-theme="light"] .markdown-content pre {
+  border-color: #d9dee6;
+  background: #eef1f5;
+  color: #263244;
+}
+
+:root[data-lurph-theme="light"] .markdown-content th,
+:root[data-lurph-theme="light"] .markdown-content td {
+  border-color: #d9dee6;
+}
+
+:root[data-lurph-theme="light"] .markdown-content th {
+  background: #e8edf4;
+}
