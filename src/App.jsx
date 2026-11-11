@@ -734,6 +734,7 @@ function ToolsView({
   isUploadingImage,
   extensionAccessEnabled,
   notice,
+  onReturnToChat,
 }) {
   const pdfInputRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -810,7 +811,16 @@ function ToolsView({
           if (file) onSelectImage(file);
         }}
       />
-      <div className="mb-3 flex items-center justify-between px-1">
+      <div className="mb-3 flex items-center gap-2 px-1">
+        <button
+          type="button"
+          onClick={onReturnToChat}
+          title="Back to chat"
+          aria-label="Back to chat"
+          className="grid size-7 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
+        >
+          <ArrowLeft size={18} />
+        </button>
         <h1 className="text-lg font-semibold tracking-tight">Tools</h1>
       </div>
       {(!extensionAccessEnabled || notice) && (
@@ -868,7 +878,7 @@ function ToolsView({
   );
 }
 
-function SettingsView({ themePreference, onThemeChange }) {
+function SettingsView({ themePreference, onThemeChange, onReturnToChat }) {
   const [extensionAccess, setExtensionAccess] = useState(false);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isUpdatingAccess, setIsUpdatingAccess] = useState(false);
@@ -1025,9 +1035,20 @@ function SettingsView({ themePreference, onThemeChange }) {
   return (
     <section className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-1">
       <div className="mb-3 px-1">
-        <h1 className="text-lg font-semibold tracking-tight">
-          Settings &amp; Appearance
-        </h1>
+        <div className="mb-1 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onReturnToChat}
+            title="Back to chat"
+            aria-label="Back to chat"
+            className="grid size-7 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <h1 className="text-lg font-semibold tracking-tight">
+            Settings &amp; Appearance
+          </h1>
+        </div>
         <p className="mt-1 text-[11px] leading-[1.5] text-[#a4a4ac]">
           Manage website access and customize how Lurph looks.
         </p>
@@ -1144,6 +1165,7 @@ function MainChatPanel({
   const messagesEndRef = useRef(null);
   const promptTextareaRef = useRef(null);
   const processedSelectionIdRef = useRef(null);
+  const previousChatRef = useRef(null);
   const selectedModel =
     CHAT_MODELS.find((item) => item.key === model) || CHAT_MODELS[0];
 
@@ -1273,6 +1295,7 @@ function MainChatPanel({
 
       // A context-menu selection always starts a fresh chat, never appends to
       // the conversation that happened to be open in the side panel.
+      previousChatRef.current = null;
       setActiveSection("chat");
       setIsHistoryOpen(false);
       setOpenedFromHistory(false);
@@ -1368,12 +1391,100 @@ function MainChatPanel({
     };
   }, [isHistoryOpen, historySearch]);
 
-  const openSection = (section) => {
+  const openSection = (section, { captureCurrentChat = false } = {}) => {
+    if (
+      section === "tools" &&
+      captureCurrentChat &&
+      activeSection === "chat" &&
+      !isHistoryOpen
+    ) {
+      const hasCurrentChat =
+        messages.length > 0 ||
+        Boolean(conversationId) ||
+        Boolean(prompt.trim()) ||
+        Boolean(activePromptTool) ||
+        Boolean(selectedTextContext) ||
+        Boolean(imageAttachment) ||
+        Boolean(pdfAttachment) ||
+        Boolean(attachedFileName);
+
+      previousChatRef.current = hasCurrentChat
+        ? {
+            conversationId,
+            messages,
+            prompt,
+            activePromptTool,
+            translateFromLanguage,
+            translateToLanguage,
+            rewriteTone,
+            pageTitle,
+            attachedFileName,
+            attachedFileText,
+            imageAttachment,
+            pdfAttachment,
+            clearPdfAttachment,
+            selectedTextContext,
+            clearSelectedTextContext,
+            openedFromHistory,
+            status,
+            model,
+          }
+        : null;
+    }
+
+    // If the user simply closes the Tools section without choosing a tool,
+    // the original chat is still in state and no return snapshot is needed.
+    if (section === "chat" && activeSection === "tools") {
+      previousChatRef.current = null;
+    }
+
     setActiveSection(section);
     if (section !== "chat") setOpenedFromHistory(false);
     setIsHistoryOpen(false);
     setIsModelMenuOpen(false);
     setIsMoreMenuOpen(false);
+  };
+
+  // Returning from History or Settings only changes the visible section.
+  // The current conversation remains in component state and is not reloaded.
+  const returnToMainChat = () => {
+    setActiveSection("chat");
+    setIsHistoryOpen(false);
+    setIsModelMenuOpen(false);
+    setIsMoreMenuOpen(false);
+    setOpenConversationMenuId(null);
+  };
+
+  const restorePreviousChat = () => {
+    const previousChat = previousChatRef.current;
+    if (!previousChat) return false;
+
+    setConversationId(previousChat.conversationId);
+    setMessages(previousChat.messages);
+    setPrompt(previousChat.prompt);
+    setActivePromptTool(previousChat.activePromptTool);
+    setTranslateFromLanguage(previousChat.translateFromLanguage);
+    setTranslateToLanguage(previousChat.translateToLanguage);
+    setRewriteTone(previousChat.rewriteTone);
+    setPageTitle(previousChat.pageTitle);
+    setAttachedFileName(previousChat.attachedFileName);
+    setAttachedFileText(previousChat.attachedFileText);
+    setImageAttachment(previousChat.imageAttachment);
+    setPdfAttachment(previousChat.pdfAttachment);
+    setClearPdfAttachment(previousChat.clearPdfAttachment);
+    setSelectedTextContext(previousChat.selectedTextContext);
+    setClearSelectedTextContext(previousChat.clearSelectedTextContext);
+    setOpenedFromHistory(previousChat.openedFromHistory);
+    setStatus(previousChat.status);
+    setModel(previousChat.model);
+    setActiveSection("chat");
+    setIsHistoryOpen(false);
+    setIsModelMenuOpen(false);
+    setIsMoreMenuOpen(false);
+    setOpenConversationMenuId(null);
+    setRenamingConversationId(null);
+    previousChatRef.current = null;
+    return true;
   };
 
   const handleQuickAction = (suggestedPrompt, toolName = "") => {
@@ -1409,7 +1520,8 @@ function MainChatPanel({
     setStatus("");
   };
 
-  const handleNewChat = () => {
+  const handleNewChat = (preservePreviousChat = false) => {
+    if (!preservePreviousChat) previousChatRef.current = null;
     setActiveSection("chat");
     setOpenedFromHistory(false);
     setConversationId(null);
@@ -1476,7 +1588,7 @@ function MainChatPanel({
           "The selected image could not be read in a supported format.",
         );
       }
-      if (startNewChat) handleNewChat();
+      if (startNewChat) handleNewChat(true);
       setImageAttachment({ name: file.name, mimeType: inferredMime, dataUrl });
       setActivePromptTool("Image Analysis");
       setPrompt(IMAGE_ANALYSIS_PROMPT);
@@ -1516,7 +1628,7 @@ function MainChatPanel({
     setStatus("Extracting text from your PDF…");
     try {
       const extracted = await extractPdf(file);
-      handleNewChat();
+      handleNewChat(true);
       setPdfAttachment(extracted);
       setActivePromptTool("PDF Q&A");
       setClearPdfAttachment(false);
@@ -1540,6 +1652,7 @@ function MainChatPanel({
   };
 
   const handleLoadConversation = async (item) => {
+    previousChatRef.current = null;
     setIsLoadingHistory(true);
     setHistoryError("");
     try {
@@ -1979,7 +2092,9 @@ function MainChatPanel({
           <button
             type="button"
             onClick={() =>
-              openSection(activeSection === "tools" ? "chat" : "tools")
+              activeSection === "tools"
+                ? openSection("chat")
+                : openSection("tools", { captureCurrentChat: true })
             }
             title="Tools"
             aria-label="Tools"
@@ -2067,7 +2182,9 @@ function MainChatPanel({
             <button
               type="button"
               onClick={() => {
-                if (openedFromHistory) {
+                if (previousChatRef.current) {
+                  restorePreviousChat();
+                } else if (openedFromHistory) {
                   setIsHistoryOpen(true);
                   setHistoryError("");
                   setOpenConversationMenuId(null);
@@ -2075,12 +2192,20 @@ function MainChatPanel({
                   openSection("tools");
                 }
               }}
-              title={openedFromHistory ? "Back to History" : "Back to Tools"}
+              title={
+                previousChatRef.current
+                  ? "Back to chat"
+                  : openedFromHistory
+                    ? "Back to History"
+                    : "Back to Tools"
+              }
               className="flex h-8 max-w-full items-center gap-2 rounded-md px-1 text-left text-sm text-[#d7d7dc] transition hover:text-white"
             >
               <ArrowLeft size={17} className="shrink-0 text-[#b8b8c0]" />
               <span className="truncate font-medium">
-                {activePromptTool || "Back to History"}
+                {previousChatRef.current
+                  ? "Back to chat"
+                  : activePromptTool || "Back to History"}
               </span>
             </button>
           </div>
@@ -2204,6 +2329,18 @@ function MainChatPanel({
 
       {isHistoryOpen ? (
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 pb-3 pt-3">
+          <div className="flex shrink-0 items-center gap-2 pb-2">
+            <button
+              type="button"
+              onClick={returnToMainChat}
+              title="Back to chat"
+              aria-label="Back to chat"
+              className="grid size-7 shrink-0 place-items-center rounded-lg text-[#a9a9ae] transition hover:bg-white/[0.07] hover:text-white"
+            >
+              <ArrowLeft size={18} />
+            </button>
+            <h1 className="text-base font-semibold tracking-tight">History</h1>
+          </div>
           <div className="shrink-0 pb-3">
             <div className="relative w-full">
               <Search
@@ -2379,9 +2516,9 @@ function MainChatPanel({
       ) : activeSection === "tools" ? (
         <ToolsView
           onUsePrompt={(suggestedPrompt, toolName) => {
-            openSection("chat");
             handleQuickAction(suggestedPrompt, toolName);
           }}
+          onReturnToChat={returnToMainChat}
           onSelectPdf={handlePdfSelect}
           onSelectImage={(file) => handleImageSelect(file, true)}
           isUploadingPdf={isUploadingPdf}
@@ -2403,6 +2540,7 @@ function MainChatPanel({
         <SettingsView
           themePreference={themePreference}
           onThemeChange={onThemeChange}
+          onReturnToChat={returnToMainChat}
         />
       ) : (
         <>
