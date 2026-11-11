@@ -2578,20 +2578,9 @@ function MainChatPanel({ currentUser, onLogout }) {
             )}
             {imageAttachment && (
               <div className="mb-1.5 flex items-center gap-2 rounded-xl border border-[#ffdc00]/25 bg-[#ffdc00]/[0.055] px-3 py-2.5">
-                <img
-                  src={imageAttachment.dataUrl}
-                  alt={imageAttachment.name}
-                  className="size-11 shrink-0 rounded-lg border border-white/[0.10] object-cover"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[11px] font-semibold text-[#f0d94b]">
-                    {imageAttachment.name}
-                  </p>
-                  <p className="mt-0.5 text-[10px] text-[#9999a1]">
-                    Image attached · available for follow-up questions in this
-                    chat
-                  </p>
-                </div>
+                <p className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#f0d94b]">
+                  {imageAttachment.name}
+                </p>
                 <button
                   type="button"
                   onClick={() => {
