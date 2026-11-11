@@ -469,3 +469,50 @@ a {
   border-color: #eef1f5;
   background: #c3c9d2;
 }
+
+/* Focused light-theme fixes for controls that use intentionally dark Tailwind
+   utility colors in the default dark palette. */
+:root[data-lurph-theme="light"] .auth-mode-tabs {
+  border-color: #d9dee6 !important;
+  background: #eef1f5 !important;
+}
+
+:root[data-lurph-theme="light"] .auth-mode-tab[aria-selected="true"] {
+  border-color: #cbd3df !important;
+  background: linear-gradient(180deg, #ffffff, #f1f4f8) !important;
+  color: #1d2530 !important;
+  box-shadow: 0 1px 2px rgba(25, 35, 48, 0.14) !important;
+}
+
+:root[data-lurph-theme="light"] .auth-mode-tab[aria-selected="false"] {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: #596579 !important;
+}
+
+:root[data-lurph-theme="light"] .history-conversation-title {
+  color: #243143 !important;
+}
+
+:root[data-lurph-theme="light"] .model-menu-option {
+  color: #344256 !important;
+}
+
+:root[data-lurph-theme="light"] .model-menu-option[aria-selected="true"] {
+  color: #806000 !important;
+  background: #fff7d6 !important;
+}
+
+:root[data-lurph-theme="light"] .model-menu-option:hover {
+  background: #e8edf4 !important;
+}
+
+:root[data-lurph-theme="light"] .theme-option[aria-pressed="true"] {
+  border-color: #d6ad00 !important;
+  background: #fff8d9 !important;
+  color: #755900 !important;
+}
+
+:root[data-lurph-theme="light"] .theme-option[aria-pressed="true"] svg {
+  color: #755900 !important;
+}

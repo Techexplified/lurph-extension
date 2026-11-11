@@ -1072,7 +1072,7 @@ function SettingsView({ themePreference, onThemeChange }) {
                   type="button"
                   onClick={() => onThemeChange(value)}
                   aria-pressed={selected}
-                  className={`flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg border px-2 py-3 text-[10px] font-medium transition ${selected ? "border-[#ffdc00]/80 bg-[#ffdc00]/[0.07] text-[#ffdc00]" : "border-white/[0.08] bg-[#111113] text-[#b8b8c0] hover:border-white/[0.18] hover:text-white"}`}
+                  className={`theme-option flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg border px-2 py-3 text-[10px] font-medium transition ${selected ? "border-[#ffdc00]/80 bg-[#ffdc00]/[0.07] text-[#ffdc00]" : "border-white/[0.08] bg-[#111113] text-[#b8b8c0] hover:border-white/[0.18] hover:text-white"}`}
                 >
                   <Icon size={18} />
                   <span>{label}</span>
@@ -1961,7 +1961,7 @@ function MainChatPanel({
                     setModel(item.key);
                     setIsModelMenuOpen(false);
                   }}
-                  className={`flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm transition hover:bg-white/[0.06] ${model === item.key ? "text-[#ffdc00]" : "text-[#dfdfe3]"}`}
+                  className={`model-menu-option flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm transition hover:bg-white/[0.06] ${model === item.key ? "text-[#ffdc00]" : "text-[#dfdfe3]"}`}
                 >
                   {item.label}
                   {model === item.key && (
@@ -2306,7 +2306,7 @@ function MainChatPanel({
                                 </span>
                                 <span className="min-w-0 flex-1">
                                   <span className="flex min-w-0 items-center gap-2">
-                                    <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#f0f0f2]">
+                                    <span className="history-conversation-title min-w-0 flex-1 truncate text-[13px] font-medium text-[#f0f0f2]">
                                       {item.title}
                                     </span>
                                     <time className="shrink-0 text-[10px] text-[#888890]">
@@ -3112,14 +3112,14 @@ function App() {
               </p>
             </div>
 
-            <div className="mb-[22px] grid grid-cols-2 gap-[3px] rounded-lg border border-[#292929] bg-[#171717] p-[3px]">
+            <div className="auth-mode-tabs mb-[22px] grid grid-cols-2 gap-[3px] rounded-lg border border-[#292929] bg-[#171717] p-[3px]">
               <button
                 type="button"
                 role="tab"
                 aria-selected={!isSignup}
                 aria-disabled={isAuthBusy}
                 disabled={isAuthBusy}
-                className={`min-h-[44px] min-w-0 rounded-md border px-2.5 py-1.5 text-[clamp(12px,1.05vw,15px)] font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:text-[#a1a1a1] ${!isSignup ? "border-[#525252] bg-gradient-to-b from-[#2d2d2d] to-[#242424] text-white shadow-[0_1px_2px_#000]" : "border-transparent bg-transparent text-[#a1a1a1] hover:text-[#f3f3f3]"}`}
+                className={`auth-mode-tab min-h-[44px] min-w-0 rounded-md border px-2.5 py-1.5 text-[clamp(12px,1.05vw,15px)] font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:text-[#a1a1a1] ${!isSignup ? "border-[#525252] bg-gradient-to-b from-[#2d2d2d] to-[#242424] text-white shadow-[0_1px_2px_#000]" : "border-transparent bg-transparent text-[#a1a1a1] hover:text-[#f3f3f3]"}`}
                 onClick={() => switchMode("signin")}
               >
                 Sign in
@@ -3130,7 +3130,7 @@ function App() {
                 aria-selected={isSignup}
                 aria-disabled={isAuthBusy}
                 disabled={isAuthBusy}
-                className={`min-h-[44px] min-w-0 rounded-md border px-2.5 py-1.5 text-[clamp(12px,1.05vw,15px)] font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:text-[#a1a1a1] ${isSignup ? "border-[#525252] bg-gradient-to-b from-[#2d2d2d] to-[#242424] text-white shadow-[0_1px_2px_#000]" : "border-transparent bg-transparent text-[#a1a1a1] hover:text-[#f3f3f3]"}`}
+                className={`auth-mode-tab min-h-[44px] min-w-0 rounded-md border px-2.5 py-1.5 text-[clamp(12px,1.05vw,15px)] font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:text-[#a1a1a1] ${isSignup ? "border-[#525252] bg-gradient-to-b from-[#2d2d2d] to-[#242424] text-white shadow-[0_1px_2px_#000]" : "border-transparent bg-transparent text-[#a1a1a1] hover:text-[#f3f3f3]"}`}
                 onClick={() => switchMode("signup")}
               >
                 Create account
