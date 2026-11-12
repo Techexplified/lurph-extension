@@ -66,7 +66,6 @@ import {
   Sun,
   Moon,
   Monitor,
-  Info,
 } from "lucide-react";
 
 const features = [
@@ -2361,12 +2360,6 @@ function MainChatPanel({
           <span className="shrink-0 whitespace-nowrap text-[#c9c9ce] tabular-nums">
             {queryUsage.remaining} left
           </span>
-          <Info
-            size={15}
-            className="shrink-0 text-[#a9a9ae]"
-            title={`You have ${queryUsage.limit} free AI queries in total.`}
-            aria-label={`You have ${queryUsage.limit} free AI queries in total.`}
-          />
         </div>
       )}
 
