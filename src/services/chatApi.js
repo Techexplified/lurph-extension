@@ -10,6 +10,11 @@ export async function extractPdf(file) {
   return data.attachment;
 }
 
+export async function getChatUsage() {
+  const { data } = await axiosInstance.get("/api/chat/usage");
+  return data.queryUsage;
+}
+
 export async function sendChatMessage(payload) {
   const { data } = await axiosInstance.post("/api/chat/completions", payload, {
     timeout: 120000,

@@ -22,6 +22,7 @@ import {
   getConversation,
   renameConversation,
   deleteConversation,
+  getChatUsage,
 } from "./services/chatApi.js";
 import {
   Check,
@@ -65,6 +66,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  Info,
 } from "lucide-react";
 
 const features = [
@@ -1214,6 +1216,7 @@ function MainChatPanel({
   const [messages, setMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const [isSending, setIsSending] = useState(false);
+  const [queryUsage, setQueryUsage] = useState(null);
   const [status, setStatus] = useState("");
   const [extensionAccessEnabled, setExtensionAccessEnabled] = useState(false);
   const [isExtensionAccessLoaded, setIsExtensionAccessLoaded] = useState(false);
@@ -1406,6 +1409,21 @@ function MainChatPanel({
     consumePendingSelection();
     return () =>
       chromeApi.storage.onChanged.removeListener(handleStorageChange);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    getChatUsage()
+      .then((usage) => {
+        if (active) setQueryUsage(usage);
+      })
+      .catch((error) => {
+        console.error("Could not load free-query usage:", error);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -1884,6 +1902,12 @@ function MainChatPanel({
     event.preventDefault();
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt || isSending) return;
+    if (queryUsage?.remaining === 0) {
+      setStatus(
+        `You have used all ${queryUsage.limit} free queries available for your account.`,
+      );
+      return;
+    }
 
     // Re-check the stored master switch and live Chrome grant at submit time;
     // disabling the composer is UI feedback, not the security boundary.
@@ -2004,6 +2028,7 @@ function MainChatPanel({
         webSearchEnabled: false,
       });
 
+      if (result.queryUsage) setQueryUsage(result.queryUsage);
       if (result.conversationId) setConversationId(result.conversationId);
       setClearSelectedTextContext(false);
       setClearPdfAttachment(false);
@@ -2042,6 +2067,9 @@ function MainChatPanel({
       setAttachedFileName("");
       setAttachedFileText("");
     } catch (error) {
+      if (error.response?.data?.code === "FREE_QUERY_LIMIT_REACHED") {
+        setQueryUsage(error.response.data.queryUsage || null);
+      }
       const message =
         error.response?.data?.message ||
         (error.code === "ECONNABORTED"
@@ -2299,6 +2327,48 @@ function MainChatPanel({
           </div>
         </div>
       </header>
+
+      {queryUsage && queryUsage.used > 0 && (
+        <div
+          className="mx-4 mb-2 flex h-7 shrink-0 items-center gap-2.5 text-[11px] text-[#e9e9ec]"
+          role="status"
+          aria-label={`${queryUsage.used} of ${queryUsage.limit} free queries used. ${queryUsage.remaining} remaining.`}
+        >
+          <Zap
+            size={17}
+            fill="#ffdc00"
+            className="shrink-0 text-[#ffdc00]"
+            aria-hidden="true"
+          />
+          <span className="shrink-0 whitespace-nowrap font-medium tabular-nums">
+            {queryUsage.used} / {queryUsage.limit} queries
+          </span>
+          <div
+            className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[#29292c]"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={queryUsage.limit}
+            aria-valuenow={queryUsage.used}
+            aria-label="Free queries used"
+          >
+            <div
+              className="h-full rounded-full bg-[#ffdc00] transition-[width] duration-300"
+              style={{
+                width: `${Math.min(100, (queryUsage.used / queryUsage.limit) * 100)}%`,
+              }}
+            />
+          </div>
+          <span className="shrink-0 whitespace-nowrap text-[#c9c9ce] tabular-nums">
+            {queryUsage.remaining} left
+          </span>
+          <Info
+            size={15}
+            className="shrink-0 text-[#a9a9ae]"
+            title={`You have ${queryUsage.limit} free AI queries in total.`}
+            aria-label={`You have ${queryUsage.limit} free AI queries in total.`}
+          />
+        </div>
+      )}
 
       {activeSection === "chat" &&
         !isHistoryOpen &&
@@ -2948,9 +3018,14 @@ function MainChatPanel({
                     !prompt.trim() ||
                     isSending ||
                     !extensionAccessEnabled ||
-                    !isExtensionAccessLoaded
+                    !isExtensionAccessLoaded ||
+                    queryUsage?.remaining === 0
                   }
-                  title="Send message"
+                  title={
+                    queryUsage?.remaining === 0
+                      ? "You have used all your free queries"
+                      : "Send message"
+                  }
                   aria-label="Send message"
                   className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#ffdc00] text-[#171600] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
                 >
