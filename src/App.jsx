@@ -489,8 +489,8 @@ function OnboardingScreen({
 
 const CHAT_MODELS = [
   { key: "gpt-4o", label: "GPT-4o" },
-  { key: "claude-sonnet", label: "Claude Sonnet" },
-  { key: "gemini-flash", label: "Gemini Flash" },
+  { key: "claude-sonnet", label: "Claude Sonnet 5.5" },
+  { key: "gemini-flash", label: "Gemini 3.8 Flash" },
   { key: "llama-3.3", label: "Llama 3.3" },
   { key: "deepseek-v3", label: "DeepSeek V3" },
 ];
