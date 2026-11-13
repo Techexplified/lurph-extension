@@ -2329,10 +2329,21 @@ function MainChatPanel({
 
       {queryUsage && queryUsage.used > 0 && (
         <div
-          className="mx-4 mb-2 flex h-7 shrink-0 items-center gap-2.5 text-[11px] text-[#e9e9ec]"
+          className="free-query-usage mx-4 mb-2 flex h-7 shrink-0 items-center gap-2.5 text-[11px] text-[#e9e9ec]"
           role="status"
           aria-label={`${queryUsage.used} of ${queryUsage.limit} free queries used. ${queryUsage.remaining} remaining.`}
         >
+          <style>{`
+            :root[data-lurph-theme="light"] .free-query-usage {
+              color: #4b5563;
+            }
+            :root[data-lurph-theme="light"] .free-query-usage .free-query-usage-track {
+              background-color: #d9dde5;
+            }
+            :root[data-lurph-theme="light"] .free-query-usage .free-query-usage-remaining {
+              color: #64748b;
+            }
+          `}</style>
           <Zap
             size={17}
             fill="#ffdc00"
@@ -2343,7 +2354,7 @@ function MainChatPanel({
             {queryUsage.used} / {queryUsage.limit} queries
           </span>
           <div
-            className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[#29292c]"
+            className="free-query-usage-track h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-[#29292c]"
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={queryUsage.limit}
@@ -2357,7 +2368,7 @@ function MainChatPanel({
               }}
             />
           </div>
-          <span className="shrink-0 whitespace-nowrap text-[#c9c9ce] tabular-nums">
+          <span className="free-query-usage-remaining shrink-0 whitespace-nowrap text-[#c9c9ce] tabular-nums">
             {queryUsage.remaining} left
           </span>
         </div>
@@ -2939,6 +2950,43 @@ function MainChatPanel({
                 >
                   Open Settings
                 </button>
+              </div>
+            )}
+            {queryUsage?.remaining === 0 && (
+              <div
+                className="free-query-exhausted-notice mb-2 flex items-start gap-2.5 rounded-xl border border-[#ffdc00]/25 bg-[#ffdc00]/[0.055] px-3 py-2.5"
+                role="status"
+                aria-live="polite"
+              >
+                <style>{`
+                  :root[data-lurph-theme="light"] .free-query-exhausted-notice {
+                    border-color: #ead58c;
+                    background-color: #fff9e6;
+                  }
+                  :root[data-lurph-theme="light"] .free-query-exhausted-notice .free-query-exhausted-icon {
+                    color: #9a7600;
+                  }
+                  :root[data-lurph-theme="light"] .free-query-exhausted-notice .free-query-exhausted-title {
+                    color: #765d00;
+                  }
+                  :root[data-lurph-theme="light"] .free-query-exhausted-notice .free-query-exhausted-description {
+                    color: #536071;
+                  }
+                `}</style>
+                <Sparkles
+                  size={16}
+                  className="free-query-exhausted-icon mt-0.5 shrink-0 text-[#ffdc00]"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0">
+                  <p className="free-query-exhausted-title text-xs font-semibold text-[#f0d94b]">
+                    You've used all your free queries!
+                  </p>
+                  <p className="free-query-exhausted-description mt-0.5 text-[11px] leading-4 text-[#c5c5ca]">
+                    Thanks for giving Lurph a try. We're working on bringing you
+                    more ways to get the most out of Lurph.
+                  </p>
+                </div>
               </div>
             )}
             <form
