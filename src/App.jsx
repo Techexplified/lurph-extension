@@ -834,7 +834,7 @@ function ToolsView({
   ];
   const toolPrompts = {
     "Image Analysis": IMAGE_ANALYSIS_PROMPT,
-    "Email Draft": "Draft a professional email using my notes.",
+    "Email Draft": "Draft a professional email...",
   };
   const handleToolClick = (title) => {
     if (!extensionAccessEnabled) return;
@@ -3051,7 +3051,7 @@ function MainChatPanel({
                   <Paperclip size={16} />
                 </label>
                 <span className="flex-1 truncate text-[11px] text-[#8e8e96]">
-                  {isSending ? "Generating response…" : "Ready when you are"}
+                  {isSending ? "Generating response…" : "Ready when you are..."}
                 </span>
                 <button
                   type="submit"
