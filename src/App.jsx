@@ -341,67 +341,68 @@ function OnboardingScreen({
       <main className="ob-screen h-svh w-full overflow-hidden bg-[#080808] p-3 text-[#f7f7f7] sm:p-4">
         <section className="ob-panel ob-step-panel mx-auto flex h-full min-h-0 w-full max-w-[650px] flex-col overflow-hidden bg-[#080808] p-4 sm:p-5">
           <OnboardingProgress step={2} />
-          <div className="ob-intro mt-6 shrink-0 text-center">
-            <h1 className="text-[clamp(22px,3vh,30px)] font-bold tracking-tight">
-              Let Lurph see what you work with
-            </h1>
-            <p className="mx-auto mt-2 max-w-[480px] text-[clamp(12px,1.8vh,15px)] leading-[1.45] text-[#aaa9ad]">
-              Lurph needs a few permissions to work across the web.
-              <br className="hidden sm:block" /> Here’s what we can and cannot
-              see.
-            </p>
-          </div>
-          <div className="ob-permission-list mt-3 grid shrink-0 gap-2">
-            {permissions.map(({ title, description }) => (
-              <div
-                key={title}
-                className="ob-permission-card flex items-start gap-3 rounded-xl border border-white/[0.05] bg-white/[0.035] p-3"
-              >
-                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#16a34a] text-white">
-                  <Check size={19} strokeWidth={3} />
-                </span>
-                <div className="min-w-0">
-                  <h2 className="text-[clamp(12px,1.7vh,14px)] font-semibold leading-5">
-                    {title}
-                  </h2>
-                  <p className="mt-1 text-[clamp(11px,1.5vh,13px)] leading-[1.35] text-[#aaa9ad]">
-                    {description}
-                  </p>
+          <div className="ob-permission-content mx-auto flex w-full max-w-[520px] flex-col">
+            <div className="ob-intro mt-6 shrink-0 text-center">
+              <h1 className="text-[clamp(22px,3vh,30px)] font-bold tracking-tight">
+                Let Lurph see what you work with
+              </h1>
+              <p className="mx-auto mt-2 max-w-[480px] text-[clamp(12px,1.8vh,15px)] leading-[1.45] text-[#aaa9ad]">
+                Lurph needs a few permissions to work across the web.
+                <br className="hidden sm:block" /> Here’s what we can and cannot
+                see.
+              </p>
+            </div>
+            <div className="ob-permission-list mt-3 grid shrink-0 gap-2">
+              {permissions.map(({ title, description }) => (
+                <div
+                  key={title}
+                  className="ob-permission-card flex items-start gap-3 rounded-xl border border-white/[0.05] bg-white/[0.035] p-3"
+                >
+                  <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#16a34a] text-white">
+                    <Check size={19} strokeWidth={3} />
+                  </span>
+                  <div className="min-w-0">
+                    <h2 className="text-[clamp(12px,1.7vh,14px)] font-semibold leading-5">
+                      {title}
+                    </h2>
+                    <p className="mt-1 text-[clamp(11px,1.5vh,13px)] leading-[1.35] text-[#aaa9ad]">
+                      {description}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-          <div className="ob-warning mt-2 rounded-xl border border-[#ef4444]/10 bg-[#ef4444]/[0.08] p-3">
-            <h2 className="text-sm font-semibold text-[#ff7777]">We do NOT:</h2>
-            <ul className="mt-1.5 grid gap-1 text-[clamp(11px,1.5vh,13px)] leading-[1.35] text-[#aaa9ad]">
-              {[
-                "Read your browsing history",
-                "Access your passwords",
-                "Access your personal files",
-                "Collect data without your consent",
-                "Use your data to train models",
-              ].map((item) => (
-                <li key={item} className="flex items-center gap-2">
-                  <CircleMinus size={15} className="shrink-0 text-[#ef6464]" />
-                  {item}
-                </li>
               ))}
-            </ul>
-          </div>
-          <div className="ob-footer mt-auto flex shrink-0 items-center justify-between gap-3 pt-3">
-            <p className="text-xs text-[#aaa9ad]">
-              Your privacy matters.{" "}
-              <span className="text-[#ffdc00] underline underline-offset-4">
-                Learn more →
-              </span>
-            </p>
-            <button
-              type="button"
-              onClick={onContinue}
-              className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ffdc00] to-[#ffc928] px-5 py-2 text-sm font-bold text-[#171500] transition hover:brightness-105"
-            >
-              Continue <ArrowRight size={17} />
-            </button>
+            </div>
+            <div className="ob-warning mt-2 rounded-xl border border-[#ef4444]/10 bg-[#ef4444]/[0.08] p-3">
+              <h2 className="text-sm font-semibold text-[#ff7777]">
+                We do NOT:
+              </h2>
+              <ul className="mt-1.5 grid gap-1 text-[clamp(11px,1.5vh,13px)] leading-[1.35] text-[#aaa9ad]">
+                {[
+                  "Read your browsing history",
+                  "Access your passwords",
+                  "Access your personal files",
+                  "Collect data without your consent",
+                  "Use your data to train models",
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <CircleMinus
+                      size={15}
+                      className="shrink-0 text-[#ef6464]"
+                    />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="ob-footer mt-4 flex shrink-0 justify-end">
+              <button
+                type="button"
+                onClick={onContinue}
+                className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ffdc00] to-[#ffc928] px-5 py-2 text-sm font-bold text-[#171500] transition hover:brightness-105"
+              >
+                Continue <ArrowRight size={17} />
+              </button>
+            </div>
           </div>
         </section>
       </main>
