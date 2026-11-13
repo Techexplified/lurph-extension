@@ -1538,7 +1538,9 @@ function MainChatPanel({
       return;
     }
 
-    if (activePromptTool) {
+    // Leaving a conversation opened from History returns to the main chat home,
+    // rather than reopening the History list.
+    if (openedFromHistory || activePromptTool) {
       handleNewChat();
       return;
     }
@@ -2380,22 +2382,13 @@ function MainChatPanel({
           <div className="shrink-0 px-4 pb-2">
             <button
               type="button"
-              onClick={() => {
-                if (activePromptTool) {
-                  returnToMainChat();
-                } else if (openedFromHistory) {
-                  setIsHistoryOpen(true);
-                  setHistoryError("");
-                  setOpenConversationMenuId(null);
-                }
-              }}
-              title={activePromptTool ? "Back to chat" : "Back to History"}
+              onClick={returnToMainChat}
+              title="Back to chat"
+              aria-label="Back to chat"
               className="flex h-8 max-w-full items-center gap-2 rounded-md px-1 text-left text-sm text-[#d7d7dc] transition hover:text-white"
             >
               <ArrowLeft size={17} className="shrink-0 text-[#b8b8c0]" />
-              <span className="truncate font-medium">
-                {activePromptTool ? "Back to chat" : "Back to History"}
-              </span>
+              <span className="truncate font-medium">Back to chat</span>
             </button>
           </div>
         )}
