@@ -29,13 +29,19 @@
   "side_panel": {
     "default_path": "index.html"
   },
-  "optional_host_permissions": [
-    "<all_urls>"
-  ],
+  "optional_host_permissions": ["<all_urls>"],
   "icons": {
     "16": "icons/lurph-16.png",
     "32": "icons/lurph-32.png",
     "48": "icons/lurph-48.png",
     "128": "icons/lurph-128.png"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Y",
+        "mac": "Command+Shift+Y"
+      }
+    }
   }
 }
