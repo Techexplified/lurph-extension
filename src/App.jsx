@@ -782,7 +782,7 @@ const REWRITE_TONES = [
 
 const TOOL_MESSAGE_LABELS = {
   rewrite: { user: "Original text", assistant: "Rewritten text" },
-  translate: { user: "Source text", assistant: "Translation" },
+  translate: { user: "", assistant: "Translation" },
   "image-analysis": { user: "Request", assistant: "Analysis" },
   "email-draft": { user: "Request", assistant: "Email draft" },
   "pdf-qa": { user: "Question", assistant: "Answer" },
