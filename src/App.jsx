@@ -33,7 +33,6 @@ import {
   MessageSquareText,
   Zap,
   CircleMinus,
-  ShieldCheck,
   Sparkles,
   Puzzle,
   Pin,
@@ -66,6 +65,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  Keyboard,
 } from "lucide-react";
 
 const features = [
@@ -241,6 +241,11 @@ function OnboardingScreen({
   onFinish,
   websiteAccessGranted,
 }) {
+  const shortcutLabel = /Mac|iPhone|iPad/i.test(
+    `${navigator.platform || ""} ${navigator.userAgent || ""}`,
+  )
+    ? "⌘ + Shift + Y"
+    : "Ctrl + Shift + Y";
   const features = [
     {
       icon: MessageSquareText,
@@ -260,9 +265,9 @@ function OnboardingScreen({
       description: "Turn your prompts into reusable workflows.",
     },
     {
-      icon: ShieldCheck,
-      title: "Private, secure, and in your control",
-      description: "Your data stays yours.",
+      icon: Keyboard,
+      title: "Open Lurph instantly",
+      description: `Press ${shortcutLabel} to open Lurph in the sidebar.`,
     },
   ];
   const permissions = [
@@ -834,7 +839,7 @@ function ToolsView({
   ];
   const toolPrompts = {
     "Image Analysis": IMAGE_ANALYSIS_PROMPT,
-    "Email Draft": "Draft a professional email...",
+    "Email Draft": "Draft a professional email using my notes.",
   };
   const handleToolClick = (title) => {
     if (!extensionAccessEnabled) return;
@@ -3051,7 +3056,7 @@ function MainChatPanel({
                   <Paperclip size={16} />
                 </label>
                 <span className="flex-1 truncate text-[11px] text-[#8e8e96]">
-                  {isSending ? "Generating response…" : "Ready when you are..."}
+                  {isSending ? "Generating response…" : "Ready when you are"}
                 </span>
                 <button
                   type="submit"
