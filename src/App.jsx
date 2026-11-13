@@ -2744,7 +2744,12 @@ function MainChatPanel({
                 <h1 className="text-center text-[24px] font-bold leading-8 tracking-tight">
                   Hi there!
                 </h1>
-                <p className="mx-auto mt-0.5 max-w-[260px] text-center text-[12.5px] leading-5 text-[#a9a9b1]">
+                <style>{`
+                  :root[data-lurph-theme="light"] .welcome-subtitle {
+                    color: #6b7280;
+                  }
+                `}</style>
+                <p className="welcome-subtitle mx-auto mt-0.5 max-w-[260px] text-center text-[12.5px] leading-5 text-[#a9a9b1]">
                   Ask, summarize, write, or research anything on this page.
                 </p>
                 <div className="mt-4 grid grid-cols-2 gap-2">
