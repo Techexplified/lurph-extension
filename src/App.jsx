@@ -1532,15 +1532,15 @@ function MainChatPanel({
   // All tab-level back buttons return to the main chat. If a regular chat
   // was saved before opening a tool, restore it. Otherwise, leave tool-specific
   // chat state behind and show the main chat home screen.
-  const returnToMainChat = () => {
+  const returnToMainChat = ({ clearCurrentConversation = false } = {}) => {
     if (previousChatRef.current) {
       restorePreviousChat();
       return;
     }
 
-    // Leaving a conversation opened from History returns to the main chat home,
-    // rather than reopening the History list.
-    if (openedFromHistory || activePromptTool) {
+    // The conversation-level back button returns to the main chat home.
+    // Leaving a conversation opened from History or a prompt tool does the same.
+    if (clearCurrentConversation || openedFromHistory || activePromptTool) {
       handleNewChat();
       return;
     }
@@ -2378,11 +2378,13 @@ function MainChatPanel({
 
       {activeSection === "chat" &&
         !isHistoryOpen &&
-        (activePromptTool || openedFromHistory) && (
+        (activePromptTool || openedFromHistory || messages.length > 0) && (
           <div className="shrink-0 px-4 pb-2">
             <button
               type="button"
-              onClick={returnToMainChat}
+              onClick={() =>
+                returnToMainChat({ clearCurrentConversation: true })
+              }
               title="Back to chat"
               aria-label="Back to chat"
               className="flex h-8 max-w-full items-center gap-2 rounded-md px-1 text-left text-sm text-[#d7d7dc] transition hover:text-white"
