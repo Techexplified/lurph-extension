@@ -293,7 +293,7 @@ function OnboardingScreen({
         <section className="ob-panel ob-step-panel mx-auto flex h-full min-h-0 w-full max-w-[650px] flex-col overflow-hidden bg-[#080808] p-4 sm:p-5">
           <div className="pointer-events-none absolute" />
           <OnboardingProgress step={1} />
-          <div className="ob-intro mt-4 shrink-0 text-center">
+          <div className="ob-intro mt-6 shrink-0 text-center">
             <h1 className="text-[clamp(25px,3.3vh,34px)] font-bold tracking-tight">
               Welcome to Lurph!
             </h1>
@@ -327,7 +327,7 @@ function OnboardingScreen({
           <button
             type="button"
             onClick={onNext}
-            className="ob-primary-button mt-auto inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ffdc00] to-[#ffc928] px-5 py-2.5 text-sm font-bold text-[#171500] transition hover:brightness-105"
+            className="ob-primary-button mt-4 inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ffdc00] to-[#ffc928] px-5 py-2.5 text-sm font-bold text-[#171500] transition hover:brightness-105"
           >
             Next <ArrowRight size={18} />
           </button>
@@ -341,7 +341,7 @@ function OnboardingScreen({
       <main className="ob-screen h-svh w-full overflow-hidden bg-[#080808] p-3 text-[#f7f7f7] sm:p-4">
         <section className="ob-panel ob-step-panel mx-auto flex h-full min-h-0 w-full max-w-[650px] flex-col overflow-hidden bg-[#080808] p-4 sm:p-5">
           <OnboardingProgress step={2} />
-          <div className="ob-intro mt-4 shrink-0 text-center">
+          <div className="ob-intro mt-6 shrink-0 text-center">
             <h1 className="text-[clamp(22px,3vh,30px)] font-bold tracking-tight">
               Let Lurph see what you work with
             </h1>
@@ -412,7 +412,7 @@ function OnboardingScreen({
     <main className="ob-screen h-svh w-full overflow-hidden bg-[#080808] p-3 text-[#f7f7f7] sm:p-4">
       <section className="ob-panel ob-final-panel mx-auto flex h-full min-h-0 w-full max-w-[1370px] flex-col overflow-hidden bg-[#080808] p-4 sm:p-5 lg:p-6">
         <OnboardingProgress step={3} />
-        <div className="ob-final-hero mt-2 shrink-0 text-center">
+        <div className="ob-final-hero mt-4 shrink-0 text-center">
           <h1 className="mt-2 text-[clamp(27px,4vh,42px)] font-bold tracking-tight">
             You’re all set!
           </h1>
