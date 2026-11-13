@@ -92,6 +92,11 @@ a {
 .ob-panel {
   position: relative;
 }
+/* Keep a clear, consistent gap between the progress indicator and each screen heading. */
+.ob-intro,
+.ob-final-hero {
+  margin-top: 32px !important;
+}
 .ob-feature-list {
   grid-template-rows: repeat(4, minmax(0, auto));
 }
@@ -119,7 +124,7 @@ a {
     margin-top: 7px !important;
   }
   .ob-intro {
-    margin-top: 8px !important;
+    margin-top: 32px !important;
   }
   .ob-feature-list {
     margin-top: 9px !important;
@@ -161,7 +166,7 @@ a {
     padding-top: 7px !important;
   }
   .ob-final-hero {
-    margin-top: 5px !important;
+    margin-top: 32px !important;
   }
   .ob-final-hero > div:first-child {
     width: 36px;
