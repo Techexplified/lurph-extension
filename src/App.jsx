@@ -394,7 +394,7 @@ function OnboardingScreen({
                 ))}
               </ul>
             </div>
-            <div className="ob-footer mt-4 flex shrink-0 justify-end">
+            <div className="ob-footer mt-4 flex shrink-0 justify-center">
               <button
                 type="button"
                 onClick={onContinue}
@@ -413,82 +413,84 @@ function OnboardingScreen({
     <main className="ob-screen h-svh w-full overflow-hidden bg-[#080808] p-3 text-[#f7f7f7] sm:p-4">
       <section className="ob-panel ob-final-panel mx-auto flex h-full min-h-0 w-full max-w-[1370px] flex-col overflow-hidden bg-[#080808] p-4 sm:p-5 lg:p-6">
         <OnboardingProgress step={3} />
-        <div className="ob-final-hero mt-4 shrink-0 text-center">
-          <h1 className="mt-2 text-[clamp(27px,4vh,42px)] font-bold tracking-tight">
-            You’re all set!
-          </h1>
-          <p className="mt-1 text-[clamp(13px,1.9vh,17px)] text-[#aaa9ad]">
-            Lurph is now ready to use on any website.
-          </p>
-          <p className="mt-2 text-[clamp(12px,1.7vh,15px)] text-[#c5c5c8]">
-            Here’s how to access it:
-          </p>
+        <div className="ob-final-content mx-auto flex w-full max-w-[1024px] flex-col">
+          <div className="ob-final-hero mt-4 shrink-0 text-center">
+            <h1 className="mt-2 text-[clamp(27px,4vh,42px)] font-bold tracking-tight">
+              You’re all set!
+            </h1>
+            <p className="mt-1 text-[clamp(13px,1.9vh,17px)] text-[#aaa9ad]">
+              Lurph is now ready to use on any website.
+            </p>
+            <p className="mt-2 text-[clamp(12px,1.7vh,15px)] text-[#c5c5c8]">
+              Here’s how to access it:
+            </p>
+          </div>
+          <div className="ob-instruction-grid mt-3 grid min-h-0 grid-cols-1 gap-2.5 lg:grid-cols-3">
+            <article className="ob-instruction-card flex min-h-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 sm:p-3.5">
+              <div className="flex items-start gap-2.5">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#ffdc00]/[0.15] text-base font-bold text-[#ffdc00]">
+                  1
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold">
+                    Find Lurph in your Chrome toolbar
+                  </h2>
+                  <p className="mt-1 text-xs leading-[1.4] text-[#aaa9ad]">
+                    Click the puzzle icon in Chrome’s toolbar, then find Lurph
+                    in the list.
+                  </p>
+                </div>
+              </div>
+              <ToolbarMock />
+            </article>
+            <article className="ob-instruction-card flex min-h-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 sm:p-3.5">
+              <div className="flex items-start gap-2.5">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#ffdc00]/[0.15] text-base font-bold text-[#ffdc00]">
+                  2
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold">
+                    Start using Lurph anywhere on the web
+                  </h2>
+                  <p className="mt-1 text-xs leading-[1.4] text-[#aaa9ad]">
+                    Right-click text or a page and choose “Ask Lurph”, or click
+                    the toolbar icon.
+                  </p>
+                </div>
+              </div>
+              <ContextMenuMock />
+            </article>
+            <article className="ob-instruction-card flex min-h-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 sm:p-3.5">
+              <div className="flex items-start gap-2.5">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#ffdc00]/[0.15] text-base font-bold text-[#ffdc00]">
+                  3
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold">
+                    Get answers, insights and more
+                  </h2>
+                  <p className="mt-1 text-xs leading-[1.4] text-[#aaa9ad]">
+                    Open Lurph to chat, summarize, translate, rewrite, and more.
+                  </p>
+                </div>
+              </div>
+              <SidebarMock />
+            </article>
+          </div>
+          {websiteAccessGranted === false && (
+            <p className="mt-2 text-center text-xs text-[#f3d66b]">
+              Website access wasn’t granted. You can enable it later in Chrome’s
+              extension settings.
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={onFinish}
+            className="ob-primary-button mx-auto mt-3 inline-flex min-h-11 w-full max-w-[360px] shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ffdc00] to-[#ffc928] px-5 py-2.5 text-sm font-bold text-[#171500] transition hover:brightness-105"
+          >
+            Start using Lurph <ArrowRight size={18} />
+          </button>
         </div>
-        <div className="ob-instruction-grid mt-3 grid min-h-0 flex-1 grid-cols-1 gap-2.5 lg:grid-cols-3">
-          <article className="ob-instruction-card flex min-h-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 sm:p-3.5">
-            <div className="flex items-start gap-2.5">
-              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#ffdc00]/[0.15] text-base font-bold text-[#ffdc00]">
-                1
-              </span>
-              <div>
-                <h2 className="text-sm font-semibold">
-                  Find Lurph in your Chrome toolbar
-                </h2>
-                <p className="mt-1 text-xs leading-[1.4] text-[#aaa9ad]">
-                  Click the puzzle icon in Chrome’s toolbar, then find Lurph in
-                  the list.
-                </p>
-              </div>
-            </div>
-            <ToolbarMock />
-          </article>
-          <article className="ob-instruction-card flex min-h-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 sm:p-3.5">
-            <div className="flex items-start gap-2.5">
-              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#ffdc00]/[0.15] text-base font-bold text-[#ffdc00]">
-                2
-              </span>
-              <div>
-                <h2 className="text-sm font-semibold">
-                  Start using Lurph anywhere on the web
-                </h2>
-                <p className="mt-1 text-xs leading-[1.4] text-[#aaa9ad]">
-                  Right-click text or a page and choose “Ask Lurph”, or click
-                  the toolbar icon.
-                </p>
-              </div>
-            </div>
-            <ContextMenuMock />
-          </article>
-          <article className="ob-instruction-card flex min-h-0 flex-col rounded-xl border border-white/[0.08] bg-white/[0.025] p-3 sm:p-3.5">
-            <div className="flex items-start gap-2.5">
-              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#ffdc00]/[0.15] text-base font-bold text-[#ffdc00]">
-                3
-              </span>
-              <div>
-                <h2 className="text-sm font-semibold">
-                  Get answers, insights and more
-                </h2>
-                <p className="mt-1 text-xs leading-[1.4] text-[#aaa9ad]">
-                  Open Lurph to chat, summarize, translate, rewrite, and more.
-                </p>
-              </div>
-            </div>
-            <SidebarMock />
-          </article>
-        </div>
-        {websiteAccessGranted === false && (
-          <p className="mt-2 text-center text-xs text-[#f3d66b]">
-            Website access wasn’t granted. You can enable it later in Chrome’s
-            extension settings.
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={onFinish}
-          className="ob-primary-button mx-auto mt-3 inline-flex min-h-11 w-full max-w-[360px] shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ffdc00] to-[#ffc928] px-5 py-2.5 text-sm font-bold text-[#171500] transition hover:brightness-105"
-        >
-          Start using Lurph <ArrowRight size={18} />
-        </button>
       </section>
     </main>
   );
