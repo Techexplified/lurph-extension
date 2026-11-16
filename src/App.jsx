@@ -1214,7 +1214,7 @@ function MainChatPanel({
     useState("Auto-detect");
   const [translateToLanguage, setTranslateToLanguage] = useState("English");
   const [rewriteTone, setRewriteTone] = useState("Professional");
-  const [, setPageTitle] = useState("Current tab");
+  const [pageTitle, setPageTitle] = useState("Current tab");
   const [attachedFileName, setAttachedFileName] = useState("");
   const [attachedFileText, setAttachedFileText] = useState("");
   const [imageAttachment, setImageAttachment] = useState(null);
