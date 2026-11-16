@@ -497,12 +497,17 @@ function OnboardingScreen({
 }
 
 const CHAT_MODELS = [
-  { key: "gpt-4o", label: "GPT-4o" },
-  { key: "claude-sonnet", label: "Claude Sonnet 5.5" },
-  { key: "gemini-flash", label: "Gemini 3.8 Flash" },
-  { key: "llama-3.3", label: "Llama 3.3" },
-  { key: "deepseek-v3", label: "DeepSeek V3" },
+  { key: "auto-free", label: "Auto (Free)" },
+  { key: "nemotron-ultra-free", label: "Nemotron 3 Ultra" },
+  { key: "ernie-flash-free", label: "ERNIE 5.5 Flash" },
+  { key: "nemotron-lightning-free", label: "Nemotron 3.5 Lightning" },
+  { key: "nemotron-super-vl-free", label: "Nemotron 3.5 Super VL" },
+  { key: "ling-flash-free", label: "Ling 3.2 Flash" },
+  { key: "inkling-small-free", label: "Inkling 2 Small" },
 ];
+
+const normalizeModelKey = (value) =>
+  CHAT_MODELS.some((item) => item.key === value) ? value : "auto-free";
 
 const QUICK_ACTIONS = [
   {
@@ -842,7 +847,7 @@ function ToolsView({
   ];
   const toolPrompts = {
     "Image Analysis": IMAGE_ANALYSIS_PROMPT,
-    "Email Draft": "Draft a professional email...",
+    "Email Draft": "Draft a professional email using my notes.",
   };
   const handleToolClick = (title) => {
     if (!extensionAccessEnabled) return;
@@ -1200,7 +1205,7 @@ function MainChatPanel({
   themePreference,
   onThemeChange,
 }) {
-  const [model, setModel] = useState("gpt-4o");
+  const [model, setModel] = useState("auto-free");
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
@@ -1581,7 +1586,7 @@ function MainChatPanel({
     setClearSelectedTextContext(previousChat.clearSelectedTextContext);
     setOpenedFromHistory(previousChat.openedFromHistory);
     setStatus(previousChat.status);
-    setModel(previousChat.model);
+    setModel(normalizeModelKey(previousChat.model));
     setActiveSection("chat");
     setIsHistoryOpen(false);
     setIsModelMenuOpen(false);
@@ -1779,7 +1784,8 @@ function MainChatPanel({
       }));
       setMessages(loadedMessages);
       setOpenedFromHistory(true);
-      if (conversation.lastModel) setModel(conversation.lastModel);
+      if (conversation.lastModel)
+        setModel(normalizeModelKey(conversation.lastModel));
       if (conversation.pageTitle) setPageTitle(conversation.pageTitle);
       else if (conversation.pdfAttachment?.name)
         setPageTitle(conversation.pdfAttachment.name);
@@ -3059,7 +3065,7 @@ function MainChatPanel({
                   <Paperclip size={16} />
                 </label>
                 <span className="flex-1 truncate text-[11px] text-[#8e8e96]">
-                  {isSending ? "Generating response…" : "Ready when you are..."}
+                  {isSending ? "Generating response…" : "Ready when you are"}
                 </span>
                 <button
                   type="submit"
